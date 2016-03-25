@@ -15,15 +15,31 @@ tmp:
 --- Modules ---
 
 WebScanner:
-- 
+Rules for joining link with a sub link:
+ * look for href
+ for base URLs (no ~ sign):
+ * if the sublink is: /<sublink> then it comes right after the base URL 
+ * if the sublink is   <sublink> then it come at the end of curr URL
+ for home URLs (~):
+ * 
 
 
 --- Tool's Functionality ---
-the tool scanning the web tree, starting with cs.technion.ac.il. and stop if:
- * it reached a page outside cs faculty
- * it already visited this page
+
+Run:
+python src/main/WebScanner.py
+
+Main Operation:
+the tool scanning over all cs faculty pages, starting with cs.technion.ac.il.
+a page is cs faculty page if one of the following holds:
+ * the url contains 'cs.technion' 
+ * the title contains 'Comuter Science'
 for every site home address it creates new dir and insert reports of bad pages of this site
 a definition for site home address is either of the following:
  * http://cs.technion.ac.il/~<basic_string>
  * http://<basic_string>.cs.technion.ac.il
 
+Debug Info:
+ * the log of the last run is kept in logs/run.log
+ * the error log is kept in logs/err.log
+ * the sites addresses of cs are kept in logs/sites.txt
