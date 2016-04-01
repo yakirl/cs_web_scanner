@@ -18,10 +18,18 @@ WebScanner:
 Rules for joining link with a sub link:
  * look for href
  for base URLs (no ~ sign):
- * if the sublink is: /<sublink> then it comes right after the base URL 
- * if the sublink is   <sublink> then it come at the end of curr URL
+ * if the sublink is: /<something> then it comes right after the base URL 
+ * if the sublink is   <something> then it come at the end of curr URL
+ * if the sublink is   /../<something> then it come at the end of curr URL
+ * if the sublink is   /<something> then it come at the end of curr URL
  for home URLs (~):
- * 
+ * if the sublink is: /<something> then it comes right after the base URL 
+ * if the sublink is   <something> then it come at the end of curr URL
+ * if the sublink is   /../<something> then it come at the end of curr URL
+ * if the sublink is   /<something> then it come at the end of curr URL
+
+* every ../ remove one dir that ends with /. which means if the last part in the URL doesnt end with '/' we dont count it
+* general: if link ends with dir ('/') the page that show is the default 'index.html'
 
 
 --- Tool's Functionality ---

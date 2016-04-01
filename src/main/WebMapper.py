@@ -4,12 +4,13 @@ import sys
 import io
 import os
 import urllib3 
+from urlparse import urljoin
+from lxml import etree
 from bs4 import BeautifulSoup
+
 from utilities.Debug import Debug
 from utilities.Misc  import Misc
 from utilities.Misc  import TimeoutException
-from urlparse import urljoin
-from lxml import etree
 
 #d = etree.HTML(data)
 #d.xpath('//link[@rel="shortcut icon"]/@href')
@@ -28,7 +29,7 @@ class PageNotFound(Exception): pass
 
 class WebScanner:
     def __init__(self):
-        self.http = misc.run_with_timer(urllib3.PoolManager, (), "PoolManger stuck")
+        self.http = misc.run_with_timer(urllib3.PoolManager, (cert_reqs = 'CERT_REQUIRED', ca_certs = certifi.where()), "PoolManger stuck")
         self.sites_addrs = set()
         self.sites_addrs_file = open(SITES_FILENAME, 'w')
         self.visited_pages = set() 
@@ -42,7 +43,10 @@ class WebScanner:
         if not self.is_data_saved:
             self.save_data()
             self.is_data_saved = True
-        debug.close()
+        try:
+            debug.close()
+        except:
+            sys.exit(0)
         sys.exit(0)
 
     def normalize_page(self, page_addr):
@@ -110,7 +114,7 @@ class WebScanner:
     '''
     def extract_links_from_page(self, page_addr, depth):
         try:
-            page_addr = self.normalize_page(page_addr)
+            #page_addr = self.normalize_page(page_addr)
             debug.assrt(depth >= 0, 'extract_link_from_pages: depth='+str(depth))
             if depth == 0:
                 return
@@ -135,14 +139,14 @@ class WebScanner:
                 #print(link.find("#"))
                 if link == "None" or link == None or (link.find("#") != -1):
                     continue
-                full_link = self.fixed_urljoin(page_addr, link)
+                full_link = urljoin(page_addr, link)
                 #debug.logger(page_addr+" + "+link+" = "+full_link)
                 #full_link = link if (link.find("http://") == 0) else page_addr+"/"+link
                 #    full_link = link
                 #else:
                 #    full_link = page_addr+"/"+link
                 #print(link_full_addr)
-                debug.logger('anc page: '+page_addr)
+                #debug.logger('anc page: '+page_addr)
                 self.extract_links_from_page(full_link, depth - 1)
         except SystemExit:
             #sys.exit(0)
@@ -156,9 +160,13 @@ class WebScanner:
             return
         except TimeoutException:
             return
-        except:
-            debug.logger('Unexpected error while handling '+page_addr, 2)
+        except urllib3.exceptions.MaxRetryError:
+            debug.logger('Max retry error on page: '+page_addr, 2)
             return
+        except:
+            #debug.logger('Unexpected error for page: '+page_addr+' - '+sys.exc_info()[0], 2)
+            debug.logger('Unexpected error for page: '+page_addr, 2)
+            raise
 
     '''
         gets full page address: http://site
@@ -166,10 +174,11 @@ class WebScanner:
     '''
     def get_html_doc(self, page_addr):
         page_data = None
-        debug.assrt(page_addr.find("http://") == 0, "get_html_doc: page_addr="+page_addr)
+        #debug.assrt(page_addr.find("http://") == 0, "get_html_doc: page_addr="+page_addr)
         request = misc.run_with_timer(self.http.request, ('GET', page_addr), "request for "+page_addr+" failed")
         if request != None:
             page_data = str(request.data) 
+        #print(request.host)
         return page_data
         
 

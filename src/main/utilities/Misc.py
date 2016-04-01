@@ -48,7 +48,7 @@ class Misc:
             with self.time_limit(time_in_sec):
                 res = func(*args)
         except TimeoutException:
-            debug.logger ("Timeout Expired: "+timeout_msg, 2)
+            #debug.logger ("Timeout Expired: "+timeout_msg, 2)
             if throw_exp:
                 raise TimeoutException
         return res
