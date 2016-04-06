@@ -20,9 +20,14 @@ class Debug:
         self.curr_log_level = 0 # 0 - tmp prints. 
                                 # 1 - logs. 
                                 # 2 - errors
-        self.flog = open(LOG_FILENAME, 'w')
+        self.flog = open(log_filename, 'w')
         self.ferr = open(ERR_FILENAME, 'w')
 
+    ''' log_level:
+        0 - debug
+        1 - info prints
+        2 - errors
+    '''
     def logger(self, msg, log_level = 0):
         if log_level >= self.curr_log_level:
             msg=msg+"\n"
@@ -43,3 +48,5 @@ class Debug:
             self.logger (msg, 2)
             if self.kill_on_assrt:
                exit(1)
+
+

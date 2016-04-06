@@ -140,6 +140,7 @@ class WebScanner:
                 if link == "None" or link == None or (link.find("#") != -1):
                     continue
                 full_link = urljoin(page_addr, link)
+                # keep into urls mapping file - this file will be used by WebInspector
                 #debug.logger(page_addr+" + "+link+" = "+full_link)
                 #full_link = link if (link.find("http://") == 0) else page_addr+"/"+link
                 #    full_link = link
