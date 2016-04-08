@@ -22,9 +22,16 @@ import sys
 from Tkinter import *
 from utilities.Debug import Debug
 from utilities.Misc  import Misc
-from abc import ABCMeta
+import Queue
+#from abc import ABCMeta
 
+import Core.incomingQ as outQ
+import Core.WorkObj as WorkObj
+incmoingQ = Queue.Queue()
 debug = Debug()
+REFRESH_TIME = 10000
+
+
 
 def report_event(event):     ### (5)
 	"""Print a description of an event, based on its attributes.
@@ -205,9 +212,20 @@ class MainGUI:
             debug.logger('Going to page: '+page_name)
             self.pages[page_name].raise_me()
     
-    def quit_program(self):
-        # do some killing stuff here
+    def ask_to_quit(self):
+        outQ.put(WorkObj(WorkObj.GUI_EXIT))
+        self.refresh(True)
+
+    def quit_gui(self):
         self.root.destroy()
+        
+
+    def refresh(self, block):
+        try:
+            incomingQ.get(block)
+        except Queue.Empty:
+            return
+        #handle here
 
     def run_gui(self):
         self.root.mainloop()
@@ -216,15 +234,6 @@ def main_gui():
     mainGUI = MainGUI()
     mainGUI.run_gui()
 
-'''
-def test1():
-    for F in (WebScannerPage, WebInspectorPage):
-        page_name = F.__name__
-        frame = F(1)
-        print(page_name)
-'''
-
 if __name__ == "__main__":
-    #test1()
     main_gui()
 

@@ -12,28 +12,27 @@ from utilities.Debug import Debug
 from utilities.Misc  import Misc
 from utilities.Misc  import TimeoutException
 
-#d = etree.HTML(data)
-#d.xpath('//link[@rel="shortcut icon"]/@href')
-
 debug = Debug()
 misc  = Misc()
 
-CS_TECHNION = 'http://www.cs.technion.ac.il/'
-SITES_FILENAME = 'logs/sites.txt'
+# System Configurations: ####
+CONFIG_FILE = 'config/mapping.conf'
+
+# Configurable Parameters: #####
 LIMIT_DEPTH = 10
+
+
 
 class PageNotFound(Exception): pass
 
-
-
-
-class WebScanner:
+class WebMapper:
     def __init__(self):
         self.http = misc.run_with_timer(urllib3.PoolManager, (cert_reqs = 'CERT_REQUIRED', ca_certs = certifi.where()), "PoolManger stuck")
         self.sites_addrs = set()
-        self.sites_addrs_file = open(SITES_FILENAME, 'w')
         self.visited_pages = set() 
         self.is_data_saved = False
+        self.conf_file = CONFIG_FILE
+        self.conf = {}
 
     def save_data(self):
         for site_addr in self.sites_addrs:
@@ -96,12 +95,9 @@ class WebScanner:
             return False
         return True
 
-    def is_cs_page(self, page_addr, soup):
-        #print(type(soup.title))
-        if (page_addr.find("cs.technion") == -1) and (str(soup.title).find('Computer Science') == -1):
-            #print('aaaaaaaaaaaaaaaaaaa')
+    def page_contains_base_url(self, page_addr):
+        if (page_addr.find(self.conf['base_url']) == -1):
             return False
-        #print(str(soup.title)+" : "+page_addr)
         return True
 
     def is_scannable_page(self, page_addr):
@@ -112,7 +108,7 @@ class WebScanner:
     '''
     Main function: recursively scann sites
     '''
-    def extract_links_from_page(self, page_addr, depth):
+    def map_engine(self, page_addr = self.conf['start_addr'], depth):
         try:
             #page_addr = self.normalize_page(page_addr)
             debug.assrt(depth >= 0, 'extract_link_from_pages: depth='+str(depth))
@@ -125,10 +121,10 @@ class WebScanner:
             html_doc = self.get_html_doc(page_addr)
             ''' we want to continue scraping in case that a connection to web page timed-out or page not found '''
             if html_doc == None or not self.validate_html_doc(html_doc):
-                debug.logger('extract_links_from_page: '+page_addr+' - page not found', 2)
+                debug.logger('map_engine: '+page_addr+' - page not found', 2)
                 raise PageNotFound
             soup = misc.run_with_timer(BeautifulSoup, (html_doc, 'html.parser'), "BeautifulSoup failed on page "+page_addr, True)
-            if not self.is_cs_page(page_addr, soup):
+            if not self.page_contains_base_url(page_addr):
                  return
             ''' if we got to here then this page is valid, scannable, cs page '''
             if self.is_page_a_site_home(page_addr):
@@ -148,7 +144,7 @@ class WebScanner:
                 #    full_link = page_addr+"/"+link
                 #print(link_full_addr)
                 #debug.logger('anc page: '+page_addr)
-                self.extract_links_from_page(full_link, depth - 1)
+                self.map_engine(full_link, depth - 1)
         except SystemExit:
             #sys.exit(0)
             self.close()
@@ -183,28 +179,34 @@ class WebScanner:
         return page_data
         
 
-    def process_web_page(self, page_addr):
-        self.extract_links_from_page(page_addr, LIMIT_DEPTH)
+    def start_mapping(self, page_addr):
+        debug.logger('-- WebMapper --')
+        self.map_engine(page_addr, LIMIT_DEPTH)
         self.save_data()
         data_path = 'data/'
         if not os.path.exists(data_path):
             os.makedirs(data_path)
-        #f = open(data_path+'example_com.txt', 'w')
-        #f.write()    
-    
+        debug.logger('Results in '+SITES_FILENAME)
 
+    def get_conf_from_file(self):
+        with open(self.conf_file, 'r') as f:
+            confs = f.readlines()
+        for var, val in confs:
+            debug.assrt(var in self.conf.keys(), 'get_conf_from_files: found bad configuration in file '+self.conf_file)
+            self.conf[var] = val
+
+    def config(self, output_dir_in, start_addr_in, base_url_in, execution_interval_in):
+        self.conf['output_dir']          = outpu_dir_in
+        self.conf['start_addr']          = start_addr_in
+        self.conf['base_url']            = base_url_in
+        self.conf['exectution_interval'] = execution_interval_in
+        f = open(self.conf_file, 'w'))
+        for var, val in self.conf.iteritems():
+            f.write(var+" "+val)
+        f.close()
 
 if __name__ == "__main__":
     page_addr = CS_TECHNION #sys.argv[1]
-    debug.logger('-- WebScanner --')
-
-    webScanner = WebScanner()
-    #r = webScanner.http.request('GET', 'http://www.cs.technon.ac.il/he/acceibility/index.html')
-    #print(str(r.data))
-    #exit(1)
-    #args = (webScanner,)
-    #misc.run_with_timer(webScanner.long_func, args)
-    webScanner.process_web_page(page_addr)
-    debug.logger('Results in '+SITES_FILENAME)
-    debug.logger('-- Good Day! --')
+    webMapper = WebMapper()
+    webMapper.start_mapping(page_addr)
     
