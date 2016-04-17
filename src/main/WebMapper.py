@@ -3,7 +3,9 @@
 import sys
 import io
 import os
-import urllib3 
+import urllib3
+import Queue
+import time
 from urlparse import urljoin
 from lxml import etree
 from bs4 import BeautifulSoup
@@ -12,31 +14,46 @@ from utilities.Debug import Debug
 from utilities.Misc  import Misc
 from utilities.Misc  import TimeoutException
 
+import Global
 debug = Debug()
 misc  = Misc()
 
+outQ = Global.coreRX
+
 # System Configurations: ####
-CONFIG_FILE = 'config/mapping.conf'
-
-# Configurable Parameters: #####
-LIMIT_DEPTH = 10
-
+CONFIG_FILE  = 'config/mapping.conf'
+OUTPUT_DIR   = 'output/mapper/'
+EXE_INTV_MIN = 1
+EXE_INTV_MAX = 3600
+BASE_URL     = 'cs.technion.ac.il'
+START_ADDR   = 'http://www'+BASE_URL
+EXE_INTV_DEFAULT = 60
+LIMIT_DEPTH      = 10
+CONFS = ['execution_interval']
 
 
 class PageNotFound(Exception): pass
 
 class WebMapper:
     def __init__(self):
-        self.http = misc.run_with_timer(urllib3.PoolManager, (cert_reqs = 'CERT_REQUIRED', ca_certs = certifi.where()), "PoolManger stuck")
+        #self.http = misc.run_with_timer(urllib3.PoolManager, (cert_reqs = 'CERT_REQUIRED', ca_certs = certifi.where()), "PoolManger stuck")
         self.sites_addrs = set()
         self.visited_pages = set() 
         self.is_data_saved = False
-        self.conf_file = CONFIG_FILE
         self.conf = {}
+        self.get_conf_from_file()
 
-    def save_data(self):
+    def save_data(self, dateime_run):
+        output_dir = OUTPUT_DIR
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        filename = 'mapper_'+datetime.datetime.strftime(datetime_run, '%Y%m%d_%H%M%S')
+        f = open(filename, 'w')
+        f.write(START_ADDR+'\n')
+        f.write(BASE_URL+'\n')
         for site_addr in self.sites_addrs:
-            self.sites_addrs_file.write(site_addr+"\n")
+            f.write(site_addr+"\n")
+        debug.logger('Results in '+OUTPUT_DIR+'/'+filename)
         
     def close(self):
         if not self.is_data_saved:
@@ -96,7 +113,7 @@ class WebMapper:
         return True
 
     def page_contains_base_url(self, page_addr):
-        if (page_addr.find(self.conf['base_url']) == -1):
+        if -1 == page_addr.find(BASE_URL):
             return False
         return True
 
@@ -108,7 +125,7 @@ class WebMapper:
     '''
     Main function: recursively scann sites
     '''
-    def map_engine(self, page_addr = self.conf['start_addr'], depth):
+    def map_engine(self, page_addr, depth):
         try:
             #page_addr = self.normalize_page(page_addr)
             debug.assrt(depth >= 0, 'extract_link_from_pages: depth='+str(depth))
@@ -178,35 +195,102 @@ class WebMapper:
         #print(request.host)
         return page_data
         
+    def run_once(self):
+        debug.logger('WebMapper.run_once:')
+        curr_datetime = datetime.datetime.now()
+        self.map_engine(START_ADDR, LIMIT_DEPTH)
+        self.save_data(curr_datetime)
 
-    def start_mapping(self, page_addr):
-        debug.logger('-- WebMapper --')
-        self.map_engine(page_addr, LIMIT_DEPTH)
-        self.save_data()
-        data_path = 'data/'
-        if not os.path.exists(data_path):
-            os.makedirs(data_path)
-        debug.logger('Results in '+SITES_FILENAME)
+
+    def run_in_cont_mode(self):
+        debug.logger('WebMapper.run_in_cont_mode:')
+        while True:
+            last_run = time.time()
+            self.run_once()
+            try:
+                workObj = incomingQ.get(False)
+            except Queue.Empty:
+                if (time.time() - last_run) > self.conf['execution_interval']:
+                    last_run = time.time()
+                    self.run_once()
+                    continue
+            switcher = {
+                WorkID.CONFIG_MAPPER: self.config,
+                WorkID.STOP_MAPPER:   self.close
+            }
+            switcher[workObj.workID](workObj.params)
+
+    def start_mapping(self):
+
+        debug.logger('WebMapper.start_mapping:')
+        interval = self.conf['execution_interval']
+        time.sleep(1)
+        return
+        if 0 == interval:
+            self.run_once()
+        else:
+            self.run_in_cont_mode()
+
+    ''' Those are general methods for Mapper configuration, you can add more configurations here.
+        current possible confiugrations:
+        execution_interval - # minutes before consequence runs. (int)
+    '''
+    def verify_exe_intv(self, execution_interval):
+        return execution_interval <= EXE_INTV_MAX and (execution_interval >= EXE_INTV_MIN)
 
     def get_conf_from_file(self):
-        with open(self.conf_file, 'r') as f:
-            confs = f.readlines()
-        for var, val in confs:
-            debug.assrt(var in self.conf.keys(), 'get_conf_from_files: found bad configuration in file '+self.conf_file)
-            self.conf[var] = val
+        conf_file_valid = False
+        try:
+            with open(CONFIG_FILE, 'r') as f:
+              confs = [tuple(i.split(' ')) for i in f]
+            conf_file_valid = (set(CONFS) == set([conf[0] for conf in confs]))
+            #debug.logger(str(conf_file_valid))
+            for c in confs:
+                if 2 != len(c):
+                    debug.logger('len is not 2')
+                    conf_file_valid = False
+            confs_dict = {c[0]: c[1] for c in confs}
+            debug.logger(confs_dict['execution_interval'])
+            conf_file_valid = conf_file_valid and self.verify_exe_intv(int(confs_dict['execution_interval']))
+            debug.logger(str(conf_file_valid))
+        except IOError:
+            debug.logger('got IOError')
+            conf_file_valid = False
+        except KeyError:
+            conf_file_valid = False
+        if not conf_file_valid:
+            debug.logger('get_conf_from_file: found bad configuration in file '+CONFIG_FILE, 2)
+            self.load_default_conf()
+        else:
+            self.conf = confs_dict
 
-    def config(self, output_dir_in, start_addr_in, base_url_in, execution_interval_in):
-        self.conf['output_dir']          = outpu_dir_in
-        self.conf['start_addr']          = start_addr_in
-        self.conf['base_url']            = base_url_in
-        self.conf['exectution_interval'] = execution_interval_in
-        f = open(self.conf_file, 'w'))
-        for var, val in self.conf.iteritems():
-            f.write(var+" "+val)
+    def save_conf_to_file(self):
+        debug.assrt(type(self.conf) == type({}), 'self.conf is not dict!')
+        f = open(CONFIG_FILE, 'w')
+        for k in self.conf.keys():
+            f.write(k+" "+str(self.conf[k]))
         f.close()
+        debug.logger('WebMapper.save_conf_to_file: data has been saved')
 
+    def load_default_conf(self):
+        debug.logger('WebMapper.loading_default_conf: loading default configurations')
+        self.conf['execution_interval'] = EXE_INTV_DEFAULT
+        self.save_conf_to_file()
+
+    def config(self, execution_interval):
+        debug.assrt(type(execution_interval) == type(1), 'WebMapper.config: param isnt int')
+        debug.logger('WebMapper.config: execution_interval='+str(execution_interval))
+        if not self.verify_exe_intv(execution_interval):
+            raise ValueError("interval must be between 1 to 3600")
+        self.conf['execution_interval'] = execution_interval
+        self.save_conf_to_file()
+
+        
+
+def main_web_mapper():
+    webMapper = WebMapper()
+    webMapper.start_mapping()
+    
 if __name__ == "__main__":
     page_addr = CS_TECHNION #sys.argv[1]
-    webMapper = WebMapper()
-    webMapper.start_mapping(page_addr)
-    
+    main_web_mapper()
