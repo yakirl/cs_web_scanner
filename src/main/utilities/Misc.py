@@ -42,7 +42,7 @@ class Misc:
         time_in_sec: time in seconds to run
         timeout_msg: message to print in case of timeout
     '''
-    def run_with_timer(self, func, args, timeout_msg = "", throw_exp = False, time_in_sec = DEFAULT_TIMEOUT):
+    def run_with_timer(self, func, args, timeout_msg = "", throw_exp = True, time_in_sec = DEFAULT_TIMEOUT):
         res = None
         try:
             with self.time_limit(time_in_sec):
@@ -52,6 +52,8 @@ class Misc:
             if throw_exp:
                 raise TimeoutException
         return res
+
+
 
 
 

@@ -1,7 +1,7 @@
 
 LOG_FILENAME = 'logs/run.log'
 ERR_FILENAME = 'logs/run.err'
-
+STDOUT = True
 
 class bcolors:
     HEADER = '\033[95m'
@@ -23,6 +23,10 @@ class Debug:
         self.flog = open(log_filename, 'w')
         self.ferr = open(ERR_FILENAME, 'w')
 
+    def _print(self, msg):
+        if STDOUT:
+            print(msg)
+
     ''' log_level:
         0 - debug
         1 - info prints
@@ -30,16 +34,16 @@ class Debug:
     '''
     def logger(self, msg, log_level = 0):
         if log_level >= self.curr_log_level:
-            msg=msg+"\n"
+            #msg=msg+"\n"
             if log_level == 2:
                 print (bcolors.WARNING + msg + bcolors.ENDC)
             else:
-                print(msg)
-            self.flog.write(msg)
+                self._print(msg)
+            self.flog.write(msg+'\n')
             if log_level == 2:
-                self.ferr.write(msg)
+                self.ferr.write(msg+'\n')
 
-    def close():
+    def close_debugger(self):
         self.flog.close()
         self.ferr.close()
 
