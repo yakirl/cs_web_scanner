@@ -17,54 +17,20 @@ Pointers:
 ***************************************************************************
 '''
 
-'''
-*********** Modules Design *******************
-Because Threading in Python == Garbage, we owe to implement the GUI module as main thread.
-all the thread managing going here.
-'''
-
-
-
 import os
 import sys
-import argparse
-import Queue
-import threading
-from enum import Enum
-from Global import *
 from Tkinter import *
-import Queue
 from utilities.Debug import Debug
 from utilities.Misc  import Misc
-from utilities.Misc  import TimeoutException
-import WebMapper
-import Interface
-
+import Queue
 #from abc import ABCMeta
 
-inQ           = coreRX
-mapperOutQ    = coreMSX
-InspectorOutQ = coreISX
-
+import Core.incomingQ as outQ
+import Core.WorkObj as WorkObj
+incmoingQ = Queue.Queue()
 debug = Debug()
+REFRESH_TIME = 10000
 
-PROGRAM_LOCK=1
-PROGRAM_LOCK_FILE='system/program_lock'
-INTERFACE_GUI = 'GUI'
-INTERFACE_CLI = 'CLI'
-OP_INSPECT = 0
-OP_MAP     = 1
-
-
-''' Configurable '''
-REFRESH_TIME = 4000
-MAPPING_OUTPUT_FILE = 'output/mapping.txt'
-MAPPING_START_ADDR  = 'http://www.cs.technion.ac.il/'
-MAPPING_BASE_URL    = 'cs.technion'
-MAPPING_EXE_INTVL   = 60
-
-INSPECTOR_DB_DIR = 'data'
-INSPECTOR_INPUT_FILE = MAPPING_OUTPUT_FILE
 
 
 def report_event(event):     ### (5)
@@ -106,22 +72,6 @@ def set_title(parent, _text):
     Label(parent, font = 5, text = _text, bg = DEFAULT_COLOR, highlightbackground = DEFAULT_COLOR).grid(pady = 5, columnspan = 10) # large columnspan to cetner the title
     next_row(1)
 
-class GenericPopUp:
-    def __init__(self, parent, message):
-        debug.logger('GenericToplevel Ctor')
-        self.parent     = parent
-        self.my_window  = Toplevel(self.parent)
-        my_frame        = Frame(self.my_window)
-        label_message   = Label(my_frame, text = message)
-        press_ok        = Button(my_frame, text = 'ok', command = self.close_window)
-        label_message.grid()
-        press_ok.grid()
-        my_frame.grid()
-
-    def close_window(self):
-        self.my_window.destroy()
-
-
 class InfoPage:
     def __init__(self, parent_frame, prev_page_name, controller):
         print('InfoPageCtor')
@@ -141,44 +91,34 @@ class InfoPage:
     def open_readme(self):
         os.system('%s %s' % (os.getenv('EDITOR'), 'README.md'))
 
-
-class ScannerSettingsPage:
-    def __init__(self, parent_frame, prev_page_name, controller):
-        print('WebScannerPageCtor')
+'''
+class WebScannerSettingsPage:
         curr_row = CURR_ROW
         self.my_frame = parent_frame
-        set_title(self.my_frame, 'Web Mapper Settings')
-        self.entry_interval = Entry(self.my_frame)
-        self.label_desc     = Label(self.my_frame,  text = 'interval in minutes. legal values: '+str(WebMapper.EXE_INTV_MIN)+' to '+str(WebMapper.EXE_INTV_MAX)+'. 0 for single run')
-        self.press_apply    = Button(self.my_frame, text = "Apply", background = "grey", command = lambda: controller.config_mapper())
-        self.press_back     = Button(self.my_frame, text = "Back",  background = "grey", command = lambda: controller.show_page(prev_page_name))
-        self.my_frame.rowconfigure(1, weight = 10)
-        self.label_desc.grid()
-        self.entry_interval.grid(pady = 10, padx = 10, row = next_row(0), column = get_col(0), sticky = S)
-        self.press_apply.grid   (pady = 10, padx = 10, row = next_row(0), column = get_col(1), sticky = S)
-        self.press_back.grid       (pady = 10, padx = 10, row = next_row(0), column = get_col(2), sticky = S)
-
+        set_title(self.my_frame, 'Web Inspector')
+        label_output_loc = Label(parent, text = 'choose location to save output file', bg = DEFAULT_COLOR, highlightbackground = DEFAULT_COLOR)
+        self.entry_output_loc = Entry(self.my_frame)
+        self.entry_outpu_loc.grid(ipadx = PADX, columnspan = 4, row = next_row(1), column = get_col(1))
+ 
     def raise_me(self):
+        debug.logger('Raising WebInspectorPage')
         self.my_frame.tkraise()
+'''
 
 
 class WebScannerPage:
     def __init__(self, parent_frame, prev_page_name, controller):
         print('WebScannerPageCtor')
-        self.controller = controller
         curr_row = CURR_ROW
         self.my_frame = parent_frame
         set_title(self.my_frame, 'Web Mapper')
-        self.label_state       = Label (self.my_frame, text = 'State: Idle',   background = DEFAULT_COLOR, font = 7)
-        self.press_start_check = Button(self.my_frame, text = "Start Mapping", background = "grey",                   command = lambda: controller.start_mapper())
-        self.press_stop_check  = Button(self.my_frame, text = "Stop  Mapping", background = "grey", state = DISABLED, command = lambda: controller.stop_mapper())
-        self.press_settings    = Button(self.my_frame, text = "Settings",      background = "grey",                   command = lambda: controller.show_page('ScannerSettingsPage'))
-        self.press_back        = Button(self.my_frame, text = "Back",          background = "grey",                   command = lambda: controller.show_page(prev_page_name))
+        self.press_start_check = Button(self.my_frame, text = "Start Mapping", background = "grey")
+        self.press_settings    = Button(self.my_frame, text = "Settings", background="grey")
+        self.press_back        = Button(self.my_frame, text = "Back",     background="grey", command = lambda: controller.show_page(prev_page_name))
         self.my_frame.rowconfigure(1, weight = 10)
-        self.label_state.      grid(columnspan = 10)
         self.press_start_check.grid(pady = 10, padx = 10, row = next_row(0), column = get_col(0), sticky = S)
-        self.press_settings.   grid(pady = 10, padx = 10, row = next_row(0), column = get_col(1), sticky = S)
-        self.press_back.       grid(pady = 10, padx = 10, row = next_row(0), column = get_col(2), sticky = S)
+        self.press_settings.grid   (pady = 10, padx = 10, row = next_row(0), column = get_col(1), sticky = S)
+        self.press_back.grid       (pady = 10, padx = 10, row = next_row(0), column = get_col(2), sticky = S)
 
     def raise_me(self):
         self.my_frame.tkraise()
@@ -236,224 +176,64 @@ class MainMenuPage:
     def raise_me(self):
         self.my_frame.tkraise()
 
-Threads = ['mapper', 'inspector']
-
+#class BasePage(metaclass = ABCMeta): pass
+        
+        
 class MainGUI:
     def __init__(self):
         debug.logger('MainGUI Ctor')
         self.root = Tk() # create main root widget
         self.root.wm_title("CS Web Scanner")
         self.pages = {}
-        for page_class in (MainMenuPage, WebScannerPage, WebInspectorPage, InfoPage, ScannerSettingsPage):
+        for page_class in (MainMenuPage, WebScannerPage, WebInspectorPage, InfoPage):
             page_name = page_class.__name__
             frame = Frame(self.root, bg=DEFAULT_COLOR, height = 500)
             frame.grid(row = 0, column = 0, rowspan = 3, columnspan = 2, sticky = W+E+N+S,  ipadx = 10, ipady = 17) 
             frame.columnconfigure(0, weight = 1)
             self.pages[page_name] = page_class(frame, self.get_prev_page_name(page_name), self)
         self.show_page('MainMenuPage')
-        self.threads = {}
-        self.outQs   = {}
-        #self._exit  = 0
+        self.root.mainloop()
 
     def get_prev_page_name(self, page_name):
         switcher = {
-            'MainMenuPage'         : None,
-            'WebScannerPage'       : 'MainMenuPage',
-            'WebInspectorPage'     : 'MainMenuPage',
-            'InfoPage'             : 'MainMenuPage',
-            'ScannerSettingsPage'  : 'WebScannerPage',
+            'MainMenuPage'     : None,
+            'WebScannerPage'   : 'MainMenuPage',
+            'WebInspectorPage' : 'MainMenuPage',
+            'InfoPage'         : 'MainMenuPage',
         }
         return switcher[page_name]
 
-    ''' manage pages navigation: working as frames stack'''
+    ''' manage pages nevigation: working as frames stack'''
     def show_page(self, page_name):
         if page_name == None:
-            debug.logger('show_page: about to Exit...')
-            if self.some_thread_exists():
-                GenericPopUp(self.root, 'cannot exit while process is running!')
-            else:
-                self.exit_program()
+            debug.logger('Exiting...')
+            self.quit_program()
         else:   
             debug.logger('Going to page: '+page_name)
             self.pages[page_name].raise_me()
     
-    def some_thread_exists(self):
-        one_live = False
-        for thread in Threads:
-            one_live = one_live or self.thread_exists(thread)
-        return one_live
+    def ask_to_quit(self):
+        outQ.put(WorkObj(WorkObj.GUI_EXIT))
+        self.refresh(True)
 
-    def thread_exists(self, thread_name):
-        return (thread_name in self.threads.keys()) #and (self.threads[thread_name].is_alive())
-
-    def exit_program(self):
-        debug.logger('exit_program:')
-        for thread_name in Threads:
-            if self.thread_exists(thread_name):
-                self.outQs[thread_name].put(WorkObj(WorkID.EXIT, exit_type = 2))
-                self.threads[thread_name].join()
+    def quit_gui(self):
         self.root.destroy()
+        
 
-    def config_mapper(self):
-        page = self.pages['ScannerSettingsPage']
-        interval = page.entry_interval.get()
+    def refresh(self, block):
         try:
-           self.webMapper.config(int(interval))
-        except ValueError:
-           GenericPopUp(self.root, 'bad value!')
-
-    def start_mapper(self):
-        debug.assrt(not self.thread_exists('mapper'), 'start_mapper: process already running!')
-        self.threads['mapper'] = threading.Thread(target = self.webMapper.start_mapping)
-        self.threads['mapper'].start()
-        self.outQs['mapper'] = mapperOutQ
-
-        page = self.pages['WebScannerPage']
-        page.press_start_check.config(state = DISABLED)
-        page.label_state.      config(text = 'State: Working')
-        page = self.pages['ScannerSettingsPage']
-        page.entry_interval.config(state = 'readonly')
-        page.press_apply.config(state = DISABLED)
-
-    def stop_mapper(self):
-        self.outQs['mapper'].put(WorkObj(WorkID.EXIT, exit_type = 1))
-        GenericPopUp(self.root, 'mapper will stop after current run')
-
-    def mapper_stopped(self):
-        debug.logger('Interface.mapper_stopped:')
-        page = self.pages['WebScannerPage']
-        page.press_start_check.config(state = NORMAL)
-        page.label_state.      config(text = 'State: Idle')
-        page = self.pages['ScannerSettingsPage']
-        page.entry_interval.config(state = NORMAL)
-        page.press_apply.config(state = NORMAL)
-
-    def inspector_stopped(self):
-        demo = 0
-
-    def refresh(self):
-        debug.logger('GUI refresh:')
-        if self.thread_exists('mapper'):
-            self.threads['mapper'].join(0.1)
-            if not self.threads['mapper'].isAlive():
-                self.mapper_stopped()
-                del self.threads['mapper']
-        if self.thread_exists('inspector'):
-            self.threads['inspector'].join(0.1)
-            if not self.threads['inspector'].isAlive():
-                self.inspector_stopped()
-                del self.threads['inspector']
-        self.root.after(REFRESH_TIME, self.refresh)
-
-    def mainloop(self):
-        self.refresh()
-        self.root.mainloop()
+            incomingQ.get(block)
+        except Queue.Empty:
+            return
+        #handle here
 
     def run_gui(self):
-        self.webMapper = WebMapper.WebMapper()
-        self.mainloop()
+        self.root.mainloop()
 
-    def run_gui_wrapper(self):
-        try:
-            self.run_gui()
-        except:
-            debug.logger('run_gui: got expcetion: '+str(sys.exc_info()[0]))
-            self.exit_program()
-            raise
+def main_gui():
+    mainGUI = MainGUI()
+    mainGUI.run_gui()
 
-class Core:
-    def __init__(self, interface, op, url):
-        #debug.logger('Core init: interface='+interface+'. op='+op+'. url='+url)
-        self.interface = interface
-        self.op        = op
-        self.url       = url
-
-    def start_mapping(self, cont_mode = False):
-        self.threads['mapper'] = threading.Thread(target = webMapper.start_mapping, args=())
-        self.threads['mapper'].start()
-
-    def stop_mapping(self):
-        workObj = WorkObj(EXIT)
-        outQs['mapper'].put(workObj)
-
-    def config_web_mapper(self, start_addr = MAPPING_START_ADDR, base_url = MAPPING_BASE_URL, executions_interval = MAPPING_EXE_INTVL):
-        webMapper.config(ouput_dir, start_addr, base_url, execution_interval)
-
-    def execute_inspector(self):
-        debug.logger('execute_inspector')
-        #webInspector = WebInspector.WebInspector()
-        #webInspector.execute_inspector()
-
-    def config_web_inspector(self, input_file, db_dir = INSPECTOR_DB_DIR): 
-        debug.logger('config_web_inspector')
-        #webInspector.config(input_file, db_dir)
-
-    '''
-    Params:
-        exit_type: 1 - exit. 2 - immediate_exit
-    '''
-    def exit_core(self, exit_type):
-        nothing = 0
-
-    def execute(self):
-        try:
-            debug.logger('Core execute')
-            if self.op == OP_MAP:
-                self.webMapper      = WebMapper.WebMapper()
-                #self.webMapper.config(0) # run_once mode
-                #self.webMapper.start_mapping()
-            else: # OP_INSPECT
-                self.webInspector = 0 
-                self.webInspector  = WebInspector.WebInspector()
-                #TODO
-        #except KeyboardInterrupt:
-        except:
-            self.exit_core()
-
-
-def main_core(interface = INTERFACE_GUI, operation = None, url= None):
-    if INTERFACE_GUI == interface:
-        mainGUI = MainGUI()
-        mainGUI.run_gui()
-    else:
-        core = Core(interface, operation, url)
-        core.execute()
-
-def arg_parsing():
-    parser = argparse.ArgumentParser(description='CS WebScanner')
-    parser.add_argument('--intf', nargs=1, choices=['GUI', 'CLI'],    help='interface. default is GUI')
-    parser.add_argument('--op',   nargs=1, choices=['INSPECT','MAP'], help='''operation: available only for CLI mode. INSPECT: check content accessibility. MAP: map urls''')
-    parser.add_argument('--url',  nargs=1,                            help='url to inspect (available only when op=INSPECT). options are: ALL / <url>')
-    args = parser.parse_args()
-    interface = args.intf[0]
-    operation = args.op[0] if args.op is not None else None
-    url       = args.op[0] if args.url is not None else None
-    #debug.logger(str(type(args.op)))
-    return (interface, operation, url)
-
-def program_lock_unlock(lock_unlock_):
-    debug.logger('program_lock_unlock: lock_unlock_='+str(lock_unlock_))
-    if PROGRAM_LOCK == 0:
-        return 1
-    is_locked = os.path.isfile(PROGRAM_LOCK_FILE)
-    if lock_unlock_ == 1 and is_locked:
-        return 0
-    elif lock_unlock_ == 1:
-        f = open(PROGRAM_LOCK_FILE, 'w')
-        f.close()
-    else:
-        os.remove(PROGRAM_LOCK_FILE)
-    return 1
-
-
-if "__main__" == __name__:
-    debug.assrt(program_lock_unlock(1), 'there is already running instance of this program!')
-    try:
-        (interface, operation, url) = arg_parsing()
-        #debug.logger(interface+' '+operation+' '+url)
-        main_core(interface, operation, url)
-    except:
-        program_lock_unlock(0)
-        raise
-    program_lock_unlock(0)
+if __name__ == "__main__":
+    main_gui()
 

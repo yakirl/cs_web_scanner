@@ -1,38 +1,12 @@
-120
-True
-WebMapper.start_mapping:
-WebMapper.start_mapping:
-ge Ctor
+MainGUI Ctor
+MainMenuPage Ctor
 WebInspectorPage Ctor
 Going to page: MainMenuPage
-GUI refresh:
-Going to page: WebScannerPage
-GUI refresh:
-Interface.mapper_stopped:
-GUI refresh:
-Interface.mapper_stopped:
-Going to page: ScannerSettingsPage
-GUI refresh:
-GUI refresh:
 Going to page: WebScannerPage
 Going to page: MainMenuPage
 Going to page: WebInspectorPage
 Raising WebInspectorPage
-GUI refresh:
-Going to page: MainMenuPage
-GUI refresh:
-Going to page: InfoPage
-GUI refresh:
 Going to page: MainMenuPage
 Going to page: InfoPage
-GUI refresh:
-GUI refresh:
-GUI refresh:
-GUI refresh:
 Going to page: MainMenuPage
-GUI refresh:
-Going to page: WebScannerPage
-Going to page: MainMenuPage
-show_page: about to Exit...
-exit_program:
-program_lock_unlock: lock_unlock_=0
+Exiting...
