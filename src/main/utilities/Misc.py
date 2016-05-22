@@ -2,7 +2,9 @@
 
 import signal
 from utilities.Debug import Debug
+from Global import *
 from contextlib import contextmanager
+import threading
 
 '''
 This class has not been checked yet!
@@ -11,17 +13,19 @@ This class has not been checked yet!
 class TimeoutException(Exception): pass
 
 DEFAULT_TIMEOUT = 8
-debug = Debug()
 
 def signal_handler(signum, frame):
     raise TimeoutException
 
 class Misc:
 
+    def __init__(self):
+        self.debug = register_debugger()
+
     def print_types(self, *args):
-        debug.logger("Printing Types:")
+        self.debug.logger("Printing Types:")
         for arg in args:
-            debug.logger(type(arg))
+            self.debug.logger(type(arg))
 
     '''
         Set alarm
@@ -45,10 +49,14 @@ class Misc:
     def run_with_timer(self, func, args, timeout_msg = "", throw_exp = True, time_in_sec = DEFAULT_TIMEOUT):
         res = None
         try:
-            with self.time_limit(time_in_sec):
+            ''' non-main thread cant set signal handler '''
+            if isinstance(threading.current_thread(), threading._MainThread):
+                with self.time_limit(time_in_sec):
+                    res = func(*args)
+            else: 
                 res = func(*args)
         except TimeoutException:
-            #debug.logger ("Timeout Expired: "+timeout_msg, 2)
+            #self.debug.logger ("Timeout Expired: "+timeout_msg, 2)
             if throw_exp:
                 raise TimeoutException
         return res

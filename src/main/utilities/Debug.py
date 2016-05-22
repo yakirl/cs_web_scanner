@@ -1,6 +1,9 @@
 
-LOG_FILENAME = 'logs/run.log'
-ERR_FILENAME = 'logs/run.err'
+import os
+
+LOGS_DIR='logs/'
+LOG_FILENAME = LOGS_DIR+'run.log'
+ERR_FILENAME = LOGS_DIR+'run.err'
 STDOUT = True
 
 class bcolors:
@@ -20,6 +23,8 @@ class Debug:
         self.curr_log_level = 0 # 0 - tmp prints. 
                                 # 1 - logs. 
                                 # 2 - errors
+        if not os.path.isdir(LOGS_DIR):
+            os.makedirs(LOGS_DIR)
         self.flog = open(log_filename, 'w')
         self.ferr = open(ERR_FILENAME, 'w')
 
@@ -30,27 +35,32 @@ class Debug:
     ''' log_level:
         0 - debug
         1 - info prints
-        2 - errors
+        2 - warnings
+        3 - errors
     '''
     def logger(self, msg, log_level = 0):
         if log_level >= self.curr_log_level:
-            #msg=msg+"\n"
-            if log_level == 2:
-                print (bcolors.WARNING + msg + bcolors.ENDC)
+            if log_level >= 2:
+                color = bcolors.WARNING if log_level == 2 else bcolors.FAIL
+                print (color + msg + bcolors.ENDC)
             else:
                 self._print(msg)
-            self.flog.write(msg+'\n')
-            if log_level == 2:
-                self.ferr.write(msg+'\n')
+            if type(msg) != type('str'):
+                return
+            msg = msg+'\n'
+            self.flog.write(msg)
+            if log_level >= 2:
+                self.ferr.write(msg)
 
     def close_debugger(self):
         self.flog.close()
         self.ferr.close()
 
-    def assrt(self, cond, msg):
+    def assrt(self, cond, msg, error = True):
         if not cond:
-            self.logger (msg, 2)
-            if self.kill_on_assrt:
+            log_level = 3 if error else 2
+            self.logger (msg, log_level)
+            if error and self.kill_on_assrt:
                exit(1)
 
 
