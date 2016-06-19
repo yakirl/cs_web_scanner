@@ -46,7 +46,7 @@ inQ           = coreRX
 mapperOutQ    = coreMSX
 InspectorOutQ = coreISX
 
-debug = global_debug
+debug = Debug()
 
 PROGRAM_LOCK=1
 PROGRAM_LOCK_FILE='system/program_lock'

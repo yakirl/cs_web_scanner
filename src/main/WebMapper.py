@@ -19,11 +19,11 @@ from utilities.Debug import Debug
 from utilities.Misc  import Misc
 from utilities.Misc  import TimeoutException
 
-from Global import *
-debug = global_debug
+import Global
+debug = Debug()
 misc  = Misc()
 
-outQ = coreRX
+outQ = Global.coreRX
 
 # System Configurations: ####
 CONFIG_FILE  = 'config/mapping.conf'
@@ -36,7 +36,7 @@ EXE_INTV_MAX = 3600
 BASE_URL     = 'cs.technion.ac.il'
 START_ADDR   = 'http://www.'+BASE_URL
 EXE_INTV_DEFAULT = 0
-LIMIT_DEPTH      = 800
+LIMIT_DEPTH      = 100
 CONFS = ['execution_interval']
 
 profiler = None
@@ -138,18 +138,10 @@ class WebMapper:
     
 
     def fixed_urljoin(self, urlpart1, urlpart2):
-        if urlpart2 == "":
-            return urlpart1
-        #debug.logger('THIS:::'+urlpart2+':::'+str(len(urlpart2))+':::')
-        try:
-            while " " == urlpart2[0] or '\n' == urlpart2[0]:
-                urlpart2 = urlpart2[1:]
-            url = urljoin(urlpart1, urlpart2)
-            #splits = str(tmp_url).split("/")
-            #splits = filter(lambda x: x!= "..", splits)
-            #url    = '/'.join(splits)
-        except:
-            return None
+        tmp_url = urljoin(urlpart1, urlpart2)
+        splits = str(tmp_url).split("/")
+        splits = filter(lambda x: x!= "..", splits)
+        url    = '/'.join(splits)
         return url
 
     def validate_html_doc(self, html_doc):
@@ -166,7 +158,7 @@ class WebMapper:
         if page_addr[-5:] != '.html' and page_addr[-4:] != '.htm' and page_addr[-1] != '/' and page_addr[-5:] != 'ac.il':
             return False
         #bad_parts = ['.pdf', '.PDF', '.doc', '.jpg', '.JPG', '.pptx', '.gif', 'mp4', 'ps', 'jigsaw']
-        bad_parts = ['jigsaw', 'facebook', 'mailto:']
+        bad_parts = ['jigsaw', 'facebook']
         for part in bad_parts:
             if page_addr.find(part) != -1:
                 return False 
@@ -214,20 +206,14 @@ class WebMapper:
             self.sites_addrs.add(page_addr)
         debug.logger("page_addr="+page_addr)
         link_tags = soup.find_all('a')
-        subset = min(100, len(link_tags))
+        subset = min(70, len(link_tags))
         for link_tag in random.sample(link_tags, subset):
         #for link_tag in link_tags:
             link = link_tag.get('href')
             #print(link.find("#"))
-            if not self.is_ascii(link) or link == "None" or link == None or (link.find("#") != -1):
+            if link == "None" or link == None or (link.find("#") != -1):
                 continue
-            full_link = self.fixed_urljoin(page_addr, link)
-            if not self.is_ascii(full_link):
-                debug.logger('map_engine: bad link: not ASCII')
-                continue
-            if None == full_link:
-                debug.logger('bad link:'+link)
-                continue
+            full_link = urljoin(page_addr, link)
             # keep into urls mapping file - this file will be used by WebInspector
             #debug.logger(page_addr+" + "+link+" = "+full_link)
             #full_link = link if (link.find("http://") == 0) else page_addr+"/"+link
