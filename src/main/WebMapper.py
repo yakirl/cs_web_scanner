@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-import signal
+#import signal
 import sys
 import io
 import os
@@ -21,20 +21,13 @@ from Global import *
 
 
 # System Configurations: ####
-CONFIG_FILE       = 'config/mapping.conf'
-OUTPUT_DIR        = 'data/mapper/'
-MAPPER_SITES_FILE = OUTPUT_DIR+'mapper_sites.txt'
-MAPPER_PAGES_FILE = OUTPUT_DIR+'mapper_pages.txt'
-MAPPER_LATEST     = OUTPUT_DIR+'mapper_latest'
+OUTPUT_DIR       = os.path.join('data', 'mapper')
+# SITES_FILE       = os.path.join(OUTPUT_DIR, 'mapper_sites.txt')
+# PAGES_FILE       = os.path.join(OUTPUT_DIR, 'mapper_pages.txt')
 EXE_INTV_MIN     = 1
 EXE_INTV_MAX     = 3600
-BASE_URL         = 'cs.technion.ac.il'
-START_ADDR       = 'http://www.'+BASE_URL
 EXE_INTV_DEFAULT = 0
-LIMIT_DEPTH      = 1300
-CONFS            = ['execution_interval']
-
-#outQ = coreRX
+LIMIT_DEPTH      = 5
 
 class PageNotFound(Exception): pass
 
@@ -44,12 +37,29 @@ class WebMapper:
         self.debug    = register_debugger()
         self.misc     = Misc()
         self.debug.logger('WebMapper initizliation')
-        self.http = self.misc.run_with_timer(urllib3.PoolManager, {'cert_reqs': 'CERT_REQUIRED', 'ca_certs': certifi.where()}, "PoolManger stuck")
-       # self.http = urllib3.PoolManager(cert_reqs = 'CERT_REQUIRED', ca_certs = certifi.where())
+        # self.http = self.misc.run_with_timer(urllib3.PoolManager, {'cert_reqs': 'CERT_REQUIRED', 'ca_certs': certifi.where()}, "PoolManger stuck") # TODO
+        self.http = urllib3.PoolManager(cert_reqs = 'CERT_REQUIRED', ca_certs = certifi.where())
+        request = self.http.request('GET', 'http://www.example.com')        
+        #self.http = urllib3.PoolManager(cert_reqs = 'CERT_REQUIRED', ca_certs = certifi.where())
         #self.http = self.misc.run_with_timer(urllib3.PoolManager, (), "PoolManger stuck")
-        self.conf          = {}
-        self.get_conf_from_file()
+        self.valid = 0
 
+    def verify_exe_intv(self, execution_interval):
+        return (execution_interval <= EXE_INTV_MAX and (execution_interval >= EXE_INTV_MIN)) or (execution_interval == 0)
+
+    def config(self, execution_interval, base_url, output_dir, output_file):
+        self.debug.assrt(type(execution_interval) == type(1), 'WebMapper.config: param isnt int')
+        self.debug.logger('WebMapper.config: execution_interval='+str(execution_interval))
+        if not self.verify_exe_intv(execution_interval):
+            raise ValueError("interval must be between 1 to 3600")
+        self.execution_interval = execution_interval
+        self.base_url           = base_url
+        self.start_addr         ='http://www.'+ base_url
+        self.output_dir         = output_dir
+        self.output_file        = output_file       
+        self.valid = 1
+        return self
+        
     def setup_for_single_run(self):
         self.profiler = Profiler.Profiler()
         self.depth_reached     = 0
@@ -68,35 +78,28 @@ class WebMapper:
             return True
 
     def save_data(self, datetime_run):
-        
-        output_dir = OUTPUT_DIR
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
+        if not os.path.exists(self.output_dir):
+            os.makedirs(self.output_dir)
         self.debug.logger('save_data: '+str(datetime_run))
         #filename = 'mapper_'+datetime.datetime.strftime(datetime_run, '%Y%m%d_%H%M%S')
         #f = open(filepath, 'w')
         #f.write(START_ADDR+'\n')
         #f.write(BASE_URL+'\n')
-        with open(MAPPER_SITES_FILE, 'w') as f:
+        with open(os.path.join(self.output_dir, "mapper_sites.txt"), 'w') as f:
             for site_addr in self.sites_addrs:
                 f.write(site_addr+"\n")
-        with open(MAPPER_PAGES_FILE, 'w') as f:
+        with open(self.output_file, 'w') as f:
             for page_addr in self.visited_pages:
                 f.write(page_addr+"\n")
-        #try:
-        #    os.unlink(MAPPER_LATEST)
-        #except:
-        #    nothing = 0
-        #os.symlink(filepath, MAPPER_LATEST)
-        self.debug.logger('Sites in '+MAPPER_SITES_FILE)
-        self.debug.logger('Pages in '+MAPPER_PAGES_FILE)
+        self.debug.logger('Sites in '+os.path.join(self.output_dir, "mapper_sites.txt"))
+        self.debug.logger('Pages in '+self.output_file)
         
     def close_single_run(self):
         runtime = round(time.time() - self.curr_run_start_time, 3)
         padding = 16
         self.debug.logger('\n\n-----+++++++++++--------')
         self.debug.logger('close_single_run:'.ljust(padding))
-        self.debug.logger('Total run time: '.ljust(padding)+str(runtime)+'s')
+        self.debug.logger('Total run time: '.ljust(padding)+str(runtime)+'s'+' ('+str(runtime/3600)+')')
         self.debug.logger('Total pages: '.ljust(padding)+str(len(self.visited_pages)))
         self.debug.logger('Total sites: '.ljust(padding)+str(len(self.sites_addrs)))
         self.debug.logger('depth reached: '.ljust(padding)+str(self.depth_reached)+'/'+str(LIMIT_DEPTH))
@@ -133,7 +136,6 @@ class WebMapper:
         return False      
 
     def fixed_urljoin(self, urlpart1, urlpart2):
-        
         if urlpart2 == "":
             return urlpart1
         #self.debug.logger('THIS:::'+urlpart2+':::'+str(len(urlpart2))+':::')
@@ -154,10 +156,10 @@ class WebMapper:
         return True
 
     def page_contains_base_url(self, page_addr):
-        if -1 == page_addr.find(BASE_URL):
+        if -1 == page_addr.find(self.base_url):
             return False
         return True
- 
+    
     def is_scannable_page(self, page_addr):
         if page_addr[-5:] != '.html' and page_addr[-4:] != '.htm' and page_addr[-1] != '/' and page_addr[-5:] != 'ac.il':
             return False
@@ -170,10 +172,23 @@ class WebMapper:
             return False
         return True
 
+    def filter_out(self, page_addr):
+        if page_addr.find('2016') != -1:
+            return False
+        if page_addr.find('photos') != -1:
+            return True
+        if page_addr.find('photo-gallery') != -1:
+            return True
+        if page_addr.find('/news/') != -1:
+            return True
+        return False
+
+
     '''
-    Main function: recursively scann sites
+    Main function: recursively scan sites
     '''
     def map_engine(self, page_addr, depth):
+        #self.debug.logger('map_engine')
         self.check_quit_requests()
         if self.need_to_quit == 2:
             return
@@ -216,7 +231,7 @@ class WebMapper:
                 return
 
     def is_this_page_good_for_jews(self, page_addr, link):
-        
+        #self.debug.logger('validat page...')
         if (None == page_addr):
             self.debug.logger('map_enginae: bad link:'+link)
             return False
@@ -228,12 +243,15 @@ class WebMapper:
         if not (self.page_contains_base_url(page_addr)):
             #self.debug.logger('map_engine: bad link: not contain base URL')
             return False
+        if self.filter_out(page_addr):
+            return False
         if not (self.is_scannable_page(page_addr)):
             #self.debug.logger('map_engine: bad link: not scannable')
             return False
         if (page_addr in self.visited_pages):
             #self.debug.logger('map_engine: bad link: visited')
             return False
+        #self.debug.logger('page good!')
         return True
 
 
@@ -245,14 +263,16 @@ class WebMapper:
         page_data = None
         err_msg   = None
         #self.debug.assrt(page_addr.find("http://") == 0, "get_html_doc: page_addr="+page_addr)
+        print('bp1')
         try:
-            request = self.misc.run_with_timer(self.http.request, ('GET', page_addr), "request for "+page_addr+" failed", True, 5)
-            self.profiler.snapshot('http_request')
+            #request = self.misc.run_with_timer(self.http.request, ('GET', page_addr), "request for "+page_addr+" failed", True, 5)  # TODO            
+            request = self.http.request('GET', page_addr)            
+            self.profiler.snapshot('http_request')            
         except KeyboardInterrupt:
             raise
         except TimeoutException:
             err_msg = 'http request timeout'
-        except :
+        except :            
             err_msg = str(sys.exc_info()[0])
         if err_msg == None:
             if (request != None):
@@ -263,12 +283,14 @@ class WebMapper:
     def run_once(self):
         self.debug.logger('WebMapper.run_once:') 
         self.setup_for_single_run()
-        self.last_run_datetime = datetime.datetime.now()
+        self.last_run_datetime = datetime.datetime.now()        
         self.curr_run_start_time = time.time()
         try:
-            self.map_engine(START_ADDR, LIMIT_DEPTH)
+            self.map_engine(self.start_addr, LIMIT_DEPTH)
         except SystemExit:
             raise SystemExit
+        except:
+            raise
         finally:
             self.close_single_run()
 
@@ -284,74 +306,23 @@ class WebMapper:
 
     def run_in_cont_mode(self):
         self.debug.logger('WebMapper.run_in_cont_mode:')
-        last_run = time.time() - self.conf['execution_interval'] - 10
+        last_run = time.time() - self.execution_interval - 10
         while 0 == self.need_to_quit:
-            if (time.time() - last_run) > self.conf['execution_interval']:
+            if (time.time() - last_run) > self.execution_interval:
                 self.run_once()
                 last_run = time.time()
 
     def start_mapping(self):
+        self.debug.assrt(self.valid == 1, "start_mapping: attempt to start mapping without configure Mapper!")
+        self.debug.logger('start_mapping: ')
         self.need_to_quit = 0
-        interval = self.conf['execution_interval']
+        interval = self.execution_interval
         self.debug.logger('WebMapper.start_mapping: interval='+str(interval))
         if 0 == interval:
             self.run_once()
         else:
             self.run_in_cont_mode()
 
-    ''' Those are general methods for Mapper configuration, you can add more configurations here.
-        current possible configurations:
-        execution_interval - # minutes before consequence runs. (int)
-    '''
-    def verify_exe_intv(self, execution_interval):
-        return (execution_interval <= EXE_INTV_MAX and (execution_interval >= EXE_INTV_MIN)) or (execution_interval == 0)
-
-    def get_conf_from_file(self):
-        conf_file_valid = False
-        try:
-            with open(CONFIG_FILE, 'r') as f:
-              confs = [tuple(i.split(' ')) for i in f]
-            conf_file_valid = (set(CONFS) == set([conf[0] for conf in confs]))
-            #self.debug.logger(str(conf_file_valid))
-            for c in confs:
-                if 2 != len(c):
-                    self.debug.logger('len is not 2')
-                    conf_file_valid = False
-            confs_dict = {c[0]: c[1] for c in confs}
-            self.debug.logger(confs_dict['execution_interval'])
-            conf_file_valid = conf_file_valid and self.verify_exe_intv(int(confs_dict['execution_interval']))
-        except IOError:
-            self.debug.logger('got IOError')
-            conf_file_valid = False
-        except KeyError:
-            conf_file_valid = False
-        if not conf_file_valid:
-            self.debug.logger('get_conf_from_file: found bad configuration in file '+CONFIG_FILE, 2)
-            self.load_default_conf()
-        else:
-            self.conf = confs_dict
-            self.conf['execution_interval'] = int(self.conf['execution_interval'])
-
-    def save_conf_to_file(self):
-        self.debug.assrt(type(self.conf) == type({}), 'self.conf is not dict!')
-        f = open(CONFIG_FILE, 'w')
-        for k in self.conf.keys():
-            f.write(k+" "+str(self.conf[k]))
-        f.close()
-        self.debug.logger('WebMapper.save_conf_to_file: data has been saved')
-
-    def load_default_conf(self):
-        self.debug.logger('WebMapper.loading_default_conf: loading default configurations')
-        self.conf['execution_interval'] = EXE_INTV_DEFAULT
-        self.save_conf_to_file()
-
-    def config(self, execution_interval):
-        self.debug.assrt(type(execution_interval) == type(1), 'WebMapper.config: param isnt int')
-        self.debug.logger('WebMapper.config: execution_interval='+str(execution_interval))
-        if not self.verify_exe_intv(execution_interval):
-            raise ValueError("interval must be between 1 to 3600")
-        self.conf['execution_interval'] = execution_interval
-        self.save_conf_to_file()
 
         
 
@@ -359,6 +330,7 @@ def main_web_mapper():
     debug = register_debugger()
     try:
         webMapper = WebMapper()
+        
         webMapper.start_mapping()
     except KeyboardInterrupt:
         debug.logger('got KeyboardInterrupt!')

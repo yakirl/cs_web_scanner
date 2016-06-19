@@ -1,9 +1,11 @@
 
 import os
+import Global
 
-LOGS_DIR='logs/'
-LOG_FILENAME = LOGS_DIR+'run.log'
-ERR_FILENAME = LOGS_DIR+'run.err'
+LOGS_DIR = os.path.join(Global.BASE_DIR, 'logs')
+LOG_FILENAME = os.path.join(LOGS_DIR, 'last_run.out')
+ERR_FILENAME = os.path.join(LOGS_DIR, 'last_run.err')
+DEBUG_MODE_FILE = os.path.join('system' ,'debug_mode')
 STDOUT = True
 
 class bcolors:
@@ -16,33 +18,44 @@ class bcolors:
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
 
+if 'nt' == os.name:
+    USE_COLOR = False
+else:
+    USE_COLOR = True
+    
+MOD_DEBUG    = 0
+MOD_INFO     = 1
+MOD_WARNINGS = 2
+MOD_ERRORS   = 3
+MOD_SILENT   = 4
 
 class Debug:
-    def __init__(self, log_filename = LOG_FILENAME):
+    def __init__(self):
         self.kill_on_assrt = True
-        self.curr_log_level = 0 # 0 - tmp prints. 
-                                # 1 - logs. 
-                                # 2 - errors
+        with open(DEBUG_MODE_FILE, 'r') as f:
+            self.curr_log_level = int(f.read()[0][0])
         if not os.path.isdir(LOGS_DIR):
             os.makedirs(LOGS_DIR)
-        self.flog = open(log_filename, 'w')
+        self.flog = open(LOG_FILENAME, 'w')
         self.ferr = open(ERR_FILENAME, 'w')
+
+    def change_mod(self, debug_mod):        
+        with open(DEBUG_MODE_FILE, 'w') as f:
+            f.write(str(debug_mod))
+        self.curr_log_level = debug_mod
 
     def _print(self, msg):
         if STDOUT:
             print(msg)
 
-    ''' log_level:
-        0 - debug
-        1 - info prints
-        2 - warnings
-        3 - errors
-    '''
     def logger(self, msg, log_level = 0):
         if log_level >= self.curr_log_level:
             if log_level >= 2:
                 color = bcolors.WARNING if log_level == 2 else bcolors.FAIL
-                print (color + msg + bcolors.ENDC)
+                if USE_COLOR:
+                    print (color + msg + bcolors.ENDC)
+                else:
+                    print(msg)
             else:
                 self._print(msg)
             if type(msg) != type('str'):
