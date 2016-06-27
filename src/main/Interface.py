@@ -73,7 +73,7 @@ def get_row(row_ix):
 def next_row(skip):
     global CURR_ROW
     ret_row = get_row(CURR_ROW)
-    CURR_ROW += skip 
+    CURR_ROW += skip
     return ret_row
 
 def get_col(col_ix):
@@ -135,8 +135,8 @@ class ScannerSettingsPage:
     def __init__(self, parent_frame, prev_page_name, controller):
         curr_row = CURR_ROW
         self.my_frame = parent_frame
-        set_title(self.my_frame, 'Web Mapper Settings')         
-        
+        set_title(self.my_frame, 'Web Mapper Settings')
+
         self.label_url_desc  = Label(self.my_frame,  text = 'domain name to scan:')
         self.entry_url       = Entry(self.my_frame)
         self.entry_url.insert(0, MAPPING_BASE_URL)
@@ -145,8 +145,8 @@ class ScannerSettingsPage:
         self.entry_interval.insert(0, MAPPING_EXE_INTVL)
         self.press_apply     = Button(self.my_frame, text = "Apply", background = "grey", command = lambda: controller.config_mapper())
         self.press_back      = Button(self.my_frame, text = "Back",  background = "grey", command = lambda: controller.show_page(prev_page_name))
-                
-        #self.my_frame.rowconfigure(1, weight = 10)             
+
+        #self.my_frame.rowconfigure(1, weight = 10)
         #self.my_frame.rowconfigure(2, weight = 3)
         next_row(1)
         self.label_url_desc. grid()
@@ -182,46 +182,46 @@ class WebScannerPage:
 
     def raise_me(self):
         self.my_frame.tkraise()
-        
+
 
 class WebInspectorPage:
     def __init__(self, parent_frame, prev_page_name, controller):
         self.debug = register_debugger()
-        self.debug.logger('WebInspectorPage Ctor')        
+        self.debug.logger('WebInspectorPage Ctor')
         self.controller = controller
         curr_row = CURR_ROW
         self.my_frame = parent_frame
         set_title(self.my_frame, 'WebInpsector')
         self.label_state       = Label (self.my_frame, text = 'State: Idle',   background = DEFAULT_COLOR, font = 7)
         self.press_start_check = Button(self.my_frame, text = "Start Inspector", background = "grey",                   command = lambda arg1 = 1, arg2 = 'inspector': controller.start_stop_module(arg1, arg2))
-        self.press_stop_check  = Button(self.my_frame, text = "Stop  Inspector", background = "grey", state = DISABLED, command = lambda arg1 = 0, arg2 = 'inspector': controller.start_stop_module(arg1, arg2))        
+        self.press_stop_check  = Button(self.my_frame, text = "Stop  Inspector", background = "grey", state = DISABLED, command = lambda arg1 = 0, arg2 = 'inspector': controller.start_stop_module(arg1, arg2))
         self.press_back        = Button(self.my_frame, text = "Back",            background = "grey",                   command = lambda: controller.show_page(prev_page_name))
         self.my_frame.rowconfigure(1, weight = 10)
         self.label_state.      grid(columnspan = 10)
         self.press_start_check.grid(pady = 10, padx = 10, row = next_row(0), column = get_col(0), sticky = S)
-        self.press_stop_check. grid(pady = 10, padx = 10, row = next_row(0), column = get_col(1), sticky = S)        
+        self.press_stop_check. grid(pady = 10, padx = 10, row = next_row(0), column = get_col(1), sticky = S)
         self.press_back.       grid(pady = 10, padx = 10, row = next_row(0), column = get_col(3), sticky = S)
-        
-        
+
+
         # curr_row = CURR_ROW
         # self.my_frame = parent_frame
         # set_title(self.my_frame, 'Web Inspector')
-        
-        # self.label_state       = Label (self.my_frame, text = 'State: Idle',   background = DEFAULT_COLOR, font = 7)        
-        
+
+        # self.label_state       = Label (self.my_frame, text = 'State: Idle',   background = DEFAULT_COLOR, font = 7)
+
         # self.press_start_check = Button(self.my_frame, text = "Start Inspector", background = "grey",                   command = lambda arg1 = 1, arg2 = 'inspector': controller.start_stop_module(arg1, arg2))
-        # self.press_stop_check  = Button(self.my_frame, text = "Stop  Inspector", background = "grey", state = DISABLED, command = lambda arg1 = 0, arg2 = 'inspector': controller.start_stop_module(arg1, arg2))                
+        # self.press_stop_check  = Button(self.my_frame, text = "Stop  Inspector", background = "grey", state = DISABLED, command = lambda arg1 = 0, arg2 = 'inspector': controller.start_stop_module(arg1, arg2))
         # self.press_back        = Button(self.my_frame, text = "Back",        background = "grey", command = lambda: controller.show_page(prev_page_name))
-        
-        
+
+
         # self.my_frame.rowconfigure(2, weight = 3)
-        
+
         # self.label_state.      grid(columnspan = 10)
         # next_row(1)
         # self.press_start_check.grid(pady = 6, row = next_row(0), column = get_col(0), sticky = S)
-        # self.press_stop_check. grid(pady = 6, row = next_row(0), column = get_col(1), sticky = S)        
+        # self.press_stop_check. grid(pady = 6, row = next_row(0), column = get_col(1), sticky = S)
         # self.press_back.       grid(pady = 6, row = next_row(0), column = get_col(2), sticky = S)
- 
+
     def raise_me(self):
         self.debug.logger('Raising WebInspectorPage')
         self.my_frame.tkraise()
@@ -236,9 +236,9 @@ class MainMenuPage:
         self.my_frame = parent_frame
         set_title(self.my_frame, 'Main Menu')
         self.menu_buttons = []
-        menu_options = [('WebScanner',   lambda arg1 = 'WebScannerPage'  : controller.show_page(arg1)), 
+        menu_options = [('WebScanner',   lambda arg1 = 'WebScannerPage'  : controller.show_page(arg1)),
                         ('WebInspector', lambda arg1 = 'WebInspectorPage': controller.show_page(arg1)),
-                        ('Info',         lambda arg1 = 'InfoPage'        : controller.show_page(arg1)), 
+                        ('Info',         lambda arg1 = 'InfoPage'        : controller.show_page(arg1)),
                         ('Exit',         lambda arg1 = prev_page_name:     controller.show_page(arg1))]
         for button_text, button_command in menu_options:
             button = Button(self.my_frame, text = button_text, background = 'grey', command = button_command)
@@ -263,7 +263,7 @@ class MainGUI:
         for page_class in (MainMenuPage, WebScannerPage, WebInspectorPage, InfoPage, ScannerSettingsPage):
             page_name = page_class.__name__
             frame = Frame(self.root, bg=DEFAULT_COLOR, height = 500)
-            frame.grid(row = 0, column = 0, rowspan = 3, columnspan = 2, sticky = W+E+N+S,  ipadx = 10, ipady = 17) 
+            frame.grid(row = 0, column = 0, rowspan = 3, columnspan = 2, sticky = W+E+N+S,  ipadx = 10, ipady = 17)
             frame.columnconfigure(0, weight = 1)
             self.pages[page_name] = page_class(frame, self.get_prev_page_name(page_name), self)
         self.show_page('MainMenuPage')
@@ -290,10 +290,10 @@ class MainGUI:
                 GenericPopUp(self.root, 'cannot exit while process is running!')
             else:
                 self.exit_program()
-        else:   
+        else:
             self.debug.logger('Going to page: '+page_name)
             self.pages[page_name].raise_me()
-    
+
     def some_thread_exists(self):
         one_live = False
         for thread in Threads:
@@ -321,7 +321,7 @@ class MainGUI:
            GenericPopUp(self.root, 'bad value!')
 
     ''' Start or Stop module immediately '''
-    def start_stop_module(self, start_stop_, module_name):        
+    def start_stop_module(self, start_stop_, module_name):
         self.debug.assrt((not self.thread_exists(module_name)) == start_stop_, 'start_'+module_name+': process already running!' if start_stop_ else 'stop_'+module_name+': process is not running!')
         if  start_stop_:
             if module_name == 'mapper':
@@ -333,18 +333,18 @@ class MainGUI:
             self.outQs[module_name].put(WorkObj(WorkID.EXIT, 2))
             self.debug.logger('Interface put exit of type 2 in Queue to '+module_name)
             GenericPopUp(self.root, module_name+' will stop now!')
-        
+
         page_name = 'WebScannerPage' if ('mapper' == module_name) else 'WebInspectorPage'
         page = self.pages[page_name]
         if start_stop_:
-            page.press_start_check.config(state = DISABLED) 
+            page.press_start_check.config(state = DISABLED)
             page.press_stop_check. config(state = NORMAL)
         else:
-            page.press_start_check.config(state = NORMAL) 
+            page.press_start_check.config(state = NORMAL)
             page.press_stop_check. config(state = DISABLED)
         message = 'State: Working' if start_stop_ else 'State: Idle'
         page.label_state.      config(text = message)
-        
+
         if 'mapper' == module_name:
             page = self.pages['ScannerSettingsPage']
             if start_stop_:
@@ -359,14 +359,14 @@ class MainGUI:
         page_name = 'WebScannerPage' if ('mapper' == module_name) else 'WebInspectorPage'
         page = self.pages[page_name]
         page.press_start_check.config(state = NORMAL)
-        page.label_state.      config(text = 'State: Idle')        
-        
+        page.label_state.      config(text = 'State: Idle')
+
         if 'mapper' == module_name:
             page = self.pages['ScannerSettingsPage']
             page.entry_interval.config(state = NORMAL)
             page.press_apply.config(state = NORMAL)
-          
-        GenericPopUp(self.root, module_name+' Done!')            
+
+        GenericPopUp(self.root, module_name+' Done!')
 
     def refresh(self):
         #self.debug.logger('GUI refresh:')
@@ -487,7 +487,6 @@ if "__main__" == __name__:
     #debug.assrt(program_lock_unlock(1), 'there is already running instance of this program! (to force start, remove system/lock file. on your responsibility)')
     try:
         (interface, operation, url, debug_mod) = arg_parsing()
-        print(str(debug_mod))
         if debug_mod != None:
             debug.change_mod(debug_mod)
         main_core(interface, operation, url)

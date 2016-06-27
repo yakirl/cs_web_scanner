@@ -22,7 +22,7 @@ if 'nt' == os.name:
     USE_COLOR = False
 else:
     USE_COLOR = True
-    
+
 MOD_DEBUG    = 0
 MOD_INFO     = 1
 MOD_WARNINGS = 2
@@ -39,7 +39,7 @@ class Debug:
         self.flog = open(LOG_FILENAME, 'w')
         self.ferr = open(ERR_FILENAME, 'w')
 
-    def change_mod(self, debug_mod):        
+    def change_mod(self, debug_mod):
         with open(DEBUG_MODE_FILE, 'w') as f:
             f.write(str(debug_mod))
         self.curr_log_level = debug_mod
@@ -58,10 +58,14 @@ class Debug:
                     print(msg)
             else:
                 self._print(msg)
-            if type(msg) != type('str'):
-                return
+            #if type(msg) != type('str'):
+            #    print(type(msg))
+            #    return
             msg = msg+'\n'
-            self.flog.write(msg)
+            try:
+                self.flog.write(msg)
+            except:
+                print("Couldnt write to file!")
             if log_level >= 2:
                 self.ferr.write(msg)
 

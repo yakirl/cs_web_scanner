@@ -39,7 +39,7 @@ class WebMapper:
         self.debug.logger('WebMapper initizliation')
         # self.http = self.misc.run_with_timer(urllib3.PoolManager, {'cert_reqs': 'CERT_REQUIRED', 'ca_certs': certifi.where()}, "PoolManger stuck") # TODO
         self.http = urllib3.PoolManager(cert_reqs = 'CERT_REQUIRED', ca_certs = certifi.where())
-        request = self.http.request('GET', 'http://www.example.com')        
+        request = self.http.request('GET', 'http://www.example.com')
         #self.http = urllib3.PoolManager(cert_reqs = 'CERT_REQUIRED', ca_certs = certifi.where())
         #self.http = self.misc.run_with_timer(urllib3.PoolManager, (), "PoolManger stuck")
         self.valid = 0
@@ -56,16 +56,16 @@ class WebMapper:
         self.base_url           = base_url
         self.start_addr         ='http://www.'+ base_url
         self.output_dir         = output_dir
-        self.output_file        = output_file       
+        self.output_file        = output_file
         self.valid = 1
         return self
-        
+
     def setup_for_single_run(self):
         self.profiler = Profiler.Profiler()
         self.depth_reached     = 0
         self.sites_addrs   = set()
-        self.visited_pages = set() 
-        self.scanned_pages = set() 
+        self.visited_pages = set()
+        self.scanned_pages = set()
         self.is_data_saved = False
 
 
@@ -93,7 +93,7 @@ class WebMapper:
                 f.write(page_addr+"\n")
         self.debug.logger('Sites in '+os.path.join(self.output_dir, "mapper_sites.txt"))
         self.debug.logger('Pages in '+self.output_file)
-        
+
     def close_single_run(self):
         runtime = round(time.time() - self.curr_run_start_time, 3)
         padding = 16
@@ -133,7 +133,7 @@ class WebMapper:
             return True
         if (num_parts == 4) and (page_addr_parts[3].find('~') == 0):
             return True
-        return False      
+        return False
 
     def fixed_urljoin(self, urlpart1, urlpart2):
         if urlpart2 == "":
@@ -159,7 +159,7 @@ class WebMapper:
         if -1 == page_addr.find(self.base_url):
             return False
         return True
-    
+
     def is_scannable_page(self, page_addr):
         if page_addr[-5:] != '.html' and page_addr[-4:] != '.htm' and page_addr[-1] != '/' and page_addr[-5:] != 'ac.il':
             return False
@@ -167,7 +167,7 @@ class WebMapper:
         bad_parts = ['jigsaw', 'facebook', 'mailto:']
         for part in bad_parts:
             if page_addr.find(part) != -1:
-                return False 
+                return False
         if not (self.is_ascii(page_addr)):
             return False
         return True
@@ -224,7 +224,7 @@ class WebMapper:
             if not self.is_ascii(link) or link == "None" or link == None or (link.find("#") != -1): # TODO: check if this can occur
                 continue
             full_link = self.fixed_urljoin(page_addr, link)
-            if not self.is_this_page_good_for_jews(full_link, link): 
+            if not self.is_this_page_good_for_jews(full_link, link):
                 continue
             self.map_engine(full_link, depth - 1)
             if (self.need_to_quit == 2):
@@ -263,27 +263,26 @@ class WebMapper:
         page_data = None
         err_msg   = None
         #self.debug.assrt(page_addr.find("http://") == 0, "get_html_doc: page_addr="+page_addr)
-        print('bp1')
         try:
-            #request = self.misc.run_with_timer(self.http.request, ('GET', page_addr), "request for "+page_addr+" failed", True, 5)  # TODO            
-            request = self.http.request('GET', page_addr)            
-            self.profiler.snapshot('http_request')            
+            #request = self.misc.run_with_timer(self.http.request, ('GET', page_addr), "request for "+page_addr+" failed", True, 5)  # TODO
+            request = self.http.request('GET', page_addr)
+            self.profiler.snapshot('http_request')
         except KeyboardInterrupt:
             raise
         except TimeoutException:
             err_msg = 'http request timeout'
-        except :            
+        except :
             err_msg = str(sys.exc_info()[0])
         if err_msg == None:
             if (request != None):
-                page_data = str(request.data) 
+                page_data = str(request.data)
         #self.debug.logger('get_html_doc: page_data='+str(page_data)+'. err_msg='+str(err_msg))
         return page_data, err_msg
-        
+
     def run_once(self):
-        self.debug.logger('WebMapper.run_once:') 
+        self.debug.logger('WebMapper.run_once:')
         self.setup_for_single_run()
-        self.last_run_datetime = datetime.datetime.now()        
+        self.last_run_datetime = datetime.datetime.now()
         self.curr_run_start_time = time.time()
         try:
             self.map_engine(self.start_addr, LIMIT_DEPTH)
@@ -295,7 +294,7 @@ class WebMapper:
             self.close_single_run()
 
     ''' 0 - no exit. 1 - exit. 2 - immediate exit '''
-    def check_quit_requests(self): 
+    def check_quit_requests(self):
         try:
             workObj = self.inQ.get(False)
         except Queue.Empty:
@@ -324,13 +323,13 @@ class WebMapper:
             self.run_in_cont_mode()
 
 
-        
+
 
 def main_web_mapper():
     debug = register_debugger()
     try:
         webMapper = WebMapper()
-        
+
         webMapper.start_mapping()
     except KeyboardInterrupt:
         debug.logger('got KeyboardInterrupt!')
@@ -339,7 +338,7 @@ def main_web_mapper():
     finally:
         if webMapper != None:
             webMapper.profiler.print_stats()
-    
+
 if __name__ == "__main__":
     debug = register_debugger(master = True)
     try:
