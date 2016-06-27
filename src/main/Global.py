@@ -8,10 +8,12 @@ import Queue
 import enum
 import os
 
-if 'nt' == os.name:
-    BASE_DIR=os.path.join('E:\\files', 'backups', 'latest_linux_backup', 'cs_web_scanner_proj', 'cs_web_scanner')
-else:
-    BASE_DIR='/home/yakir/cs_web_scanner_proj/cs_web_scanner/'
+#if 'nt' == os.name:
+#    BASE_DIR=os.path.join('E:\\files', 'backups', 'latest_linux_backup', 'cs_web_scanner_proj', 'cs_web_scanner')
+
+main_dir = os.path.split(os.path.abspath(__file__))[0]
+src_dir  = os.path.split(main_dir)[0]
+BASE_DIR = os.path.split(src_dir)[0]
     
 Debug = imp.load_source('Debug', os.path.join(BASE_DIR, 'src', 'main', 'utilities', 'Debug.py'))
 

@@ -26,7 +26,6 @@ all the thread managing going here.
 import os
 import sys
 import argparse
-#import Queue
 from multiprocessing import Queue
 import threading
 from enum import Enum
@@ -59,9 +58,11 @@ MAPPING_OUTPUT_FILE = os.path.join(MAPPING_OUTPUT_DIR, 'mapper_pages.txt')
 INSPECTOR_DB_DIR     = os.path.join(BASE_DIR, 'data', 'reports')
 INSPECTOR_INPUT_FILE = MAPPING_OUTPUT_FILE
 
+
+README_FILE = os.path.join(BASE_DIR, 'README.md')
 # default values (configurable via parameters):
 MAPPING_BASE_URL    = 'cs.technion.ac.il/'
-MAPPING_START_ADDR  = 'http://www.'+MAPPING_BASE_URL
+MAPPING_START_ADDR  = 'http://'+MAPPING_BASE_URL
 MAPPING_EXE_INTVL   = 0 # 0 - run once. else - run every interval
 
 
@@ -128,7 +129,7 @@ class InfoPage:
         self.my_frame.tkraise()
 
     def open_readme(self):
-        os.system('%s %s' % (os.getenv('EDITOR'), 'README.md'))
+        os.system('%s %s &' % ('gedit', README_FILE))
 
 
 class ScannerSettingsPage:
@@ -148,15 +149,14 @@ class ScannerSettingsPage:
 
         #self.my_frame.rowconfigure(1, weight = 10)
         #self.my_frame.rowconfigure(2, weight = 3)
-        next_row(1)
-        self.label_url_desc. grid()
-        self.entry_url.      grid(pady = 10, padx = 10, row = next_row(0), column = get_col(1), sticky = S)
+        self.label_url_desc. grid(pady = 5, row = next_row(0), sticky = S)
+        self.entry_url.      grid(pady = 5, padx = 10, row = next_row(0), column = get_col(1), sticky = S)
         next_row(1)
         self.label_intv_desc.grid()
-        self.entry_interval. grid(pady = 10, padx = 10, row = next_row(0), column = get_col(1), sticky = S)
+        self.entry_interval. grid(pady = 5, padx = 10, row = next_row(0), column = get_col(1), sticky = S)
         next_row(1)
-        self.press_apply.    grid(pady = 10, padx = 10, row = next_row(0), column = get_col(0), sticky = S)
-        self.press_back.     grid(pady = 10, padx = 10, row = next_row(0), column = get_col(1), sticky = S)
+        self.press_apply.    grid(pady = 5, padx = 10, row = next_row(0), column = get_col(0), sticky = S)
+        self.press_back.     grid(pady = 5, padx = 10, row = next_row(0), column = get_col(1), sticky = S)
 
     def raise_me(self):
         self.my_frame.tkraise()

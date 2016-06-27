@@ -54,7 +54,7 @@ class WebMapper:
             raise ValueError("interval must be between 1 to 3600")
         self.execution_interval = execution_interval
         self.base_url           = base_url
-        self.start_addr         ='http://www.'+ base_url
+        self.start_addr         ='http://'+ base_url
         self.output_dir         = output_dir
         self.output_file        = output_file
         self.valid = 1

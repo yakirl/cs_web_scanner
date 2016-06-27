@@ -18,9 +18,8 @@ Operation:
  - put the report for the this URL inside that dir,
 '''
 
-local_dir =         os.path.join(BASE_DIR, "Grunt_demo")
-grunt_dir =         os.path.join(local_dir, "node_modules", "grunt-accessibility")
-htmls_dir =         os.path.join(grunt_dir, "test_dir")
+grunt_dir =         os.path.join(BASE_DIR, "node_modules", "grunt-accessibility")
+htmls_dir =         os.path.join(grunt_dir, "example")
 INSPECTOR_DIR =         os.path.join(BASE_DIR, "data", "inspector")
 urls_file =         os.path.join(BASE_DIR, "urls.txt")
 urls_file_local =   os.path.join(BASE_DIR, "data", "inspector", "urls_local.txt")
@@ -28,7 +27,7 @@ HTML_FILE =         os.path.join(htmls_dir, "check.html")
 OUTPUT_DIR =        os.path.join(BASE_DIR, "grunt_reports")
 grunt_report_dir =  os.path.join(grunt_dir, "reports", "csv")
 report_file =       os.path.join(grunt_report_dir, "report.csv")
-TMP_FILE_PATH =     os.path.join(BASE_DIR, 'tmp_url_file.txt')
+#TMP_FILE_PATH =     os.path.join(BASE_DIR, 'tmp_url_file.txt')
 
 class WebInspector:
     def __init__(self):
@@ -68,7 +67,7 @@ class WebInspector:
 
     def url_scan(self):
         self.need_to_quit = 0
-        self.clean_dir()
+        #self.clean_dir()
         if not os.path.exists(INSPECTOR_DIR):
             os.makedirs(INSPECTOR_DIR)
         shutil.copyfile(self.urls_file, urls_file_local)
@@ -90,22 +89,28 @@ class WebInspector:
                 print "running grunt on "+url
 
                 ### for debug - replacing grunt with demo report file ###
-                #os.system("grunt accessibility")
-                with open(report_file, "w") as f:
-                    f.write('NOTICE: This line should be printed\n')
-                    f.write('ERROR: This line should be printed\n')
-                    f.write('NOTHING: This line shouldnt!\n')
+	        os.system("grunt accessibility")
+		#print("OOO GRUNT FAILED! on %s" % (url))
+		#continue
+                #with open(report_file, "w") as f:
+                #    f.write('NOTICE: This line should be printed\n')
+                #    f.write('ERROR: This line should be printed\n')
+                #    f.write('NOTHING: This line shouldnt!\n')
                 ### End Debug ###
 
                 hf.close()
                 os.remove(HTML_FILE)
                 #handeling the grunt report
-                rf = open(report_file,"r")
+		try:
+	            	rf = open(report_file,"r")
+		except IOError:
+			print("OOO GRUNT FAILED! on %s" % (url))
+			continue
                 domain = self.get_url_domain(url)
                 curr_output_dir = os.path.join(self.output_dir, domain)
                 if not os.path.exists(curr_output_dir):
                     os.makedirs(curr_output_dir)
-                of = open(curr_output_dir+"\\"+url.replace("\n","").replace("http:","").replace("/","")+".csv","w")
+                of = open(os.path.join(curr_output_dir, url.replace("\n","").replace("http://","").replace("/","_")+".csv"), 'w')
                 for line in rf:
                     if line.startswith("NOTICE") or line.startswith("ERROR") or line.startswith("heading, "):
                         of.write(line)
