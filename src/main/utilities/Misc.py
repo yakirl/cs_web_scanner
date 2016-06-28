@@ -45,7 +45,7 @@ class Misc:
         args: tuple of arguments for func
         time_in_sec: time in seconds to run
         timeout_msg: message to print in case of timeout
-      
+
     Note: this is not implemented yet, since signals supported only for main thread. TODO.
     '''
     def run_with_timer(self, func, args, timeout_msg = "", throw_exp = True, time_in_sec = DEFAULT_TIMEOUT):
@@ -55,7 +55,7 @@ class Misc:
             if isinstance(threading.current_thread(), threading._MainThread):
                 with self.time_limit(time_in_sec):
                     res = func(*args)
-            else: 
+            else:
                 res = func(*args)
         except TimeoutException:
             #self.debug.logger ("Timeout Expired: "+timeout_msg, 2)

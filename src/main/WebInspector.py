@@ -86,7 +86,7 @@ class WebInspector:
                 html_data = f.read()
                 hf = open(HTML_FILE,"w")
                 hf.write(html_data)
-                print "running grunt on "+url
+                self.debug.logger("running grunt on: "+url,1)
 
                 ### for debug - replacing grunt with demo report file ###
 	        os.system("grunt accessibility > /dev/null")
@@ -104,7 +104,7 @@ class WebInspector:
 		try:
 	            	rf = open(report_file,"r")
 		except IOError:
-			print("OOO GRUNT FAILED! on %s" % (url))
+			self.debug.logger("OOO GRUNT FAILED! on %s" % (url), 2)
 			continue
                 domain = self.get_url_domain(url)
                 curr_output_dir = os.path.join(self.output_dir, domain)

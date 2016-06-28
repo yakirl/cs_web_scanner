@@ -11,8 +11,9 @@ import Queue
 import time
 import random
 from urlparse import urljoin
-from lxml import etree
-from bs4 import BeautifulSoup
+import lxml
+from bs4 import BeautifulSoup, SoupStrainer
+from functools import partial
 import Profiler
 from utilities.Debug import Debug
 from utilities.Misc  import Misc
@@ -72,6 +73,8 @@ class WebMapper:
     def is_ascii(self, _string):
         try:
             _string.decode('ascii')
+        except KeyboardInterrupt, SystemExit:
+            raise
         except:
             return False
         else:
@@ -146,6 +149,8 @@ class WebMapper:
             #splits = str(tmp_url).split("/")
             #splits = filter(lambda x: x!= "..", splits)
             #url    = '/'.join(splits)
+        except KeyboardInterrupt, SystemExit:
+            raise
         except:
             return None
         return url
@@ -156,7 +161,7 @@ class WebMapper:
         return True
 
     def contains(self, _str, substr):
-        return -1 != _str.find(substr) 
+        return -1 != _str.find(substr)
 
 
     def page_contains_base_url(self, page_addr):
@@ -212,27 +217,35 @@ class WebMapper:
             return
         self.profiler.snapshot('initial_checks')
         try:
-            soup = self.misc.run_with_timer(BeautifulSoup, (html_doc, 'html.parser'), "BeautifulSoup failed on page "+page_addr, True)
+            self.debug.logger("Running BS on %s" % (page_addr))
+            #soup = self.misc.run_with_timer(BeautifulSoup, (html_doc, 'html.parser'), "BeautifulSoup failed on page "+page_addr, True)
+            sps = SoupStrainer('a')
+            callBS = partial(BeautifulSoup, html_doc, 'lxml', parseOnlyThese = sps)
+            soup = self.misc.run_with_timer(callBS, (),  "BeautifulSoup failed on page "+page_addr, True)
+            #soup = self.misc.run_with_timer(BeautifulSoup, (html_doc, 'lxml', {'parseOnlyThese': SoupStrainer('a')} ), "BeautifulSoup failed on page "+page_addr, True)
+            #soup = BeautifulSoup (html_doc, 'lxml', parseOnlyThese = SoupStrainer('a') )
         except (KeyboardInterrupt, SystemExit) as e:
             raise
         except:
             err_msg = str(sys.exc_info()[0])
             self.debug.logger('map_engine: bad page '+page_addr+': '+err_msg, 2)
             return
+        #self.debug.logger("soup = %s" % (soup))
         self.profiler.snapshot('beautifulsoups')
         self.visited_pages.add(page_addr)
         if self.is_page_a_site_home(page_addr):
             self.sites_addrs.add(page_addr)
         self.debug.logger("page_addr="+page_addr, 1)
         link_tags = soup.find_all('a')
-        self.debug.logger("found all links")
+        #link_tags = page_addr.findAll('a')
+
+        #self.debug.logger("link_tags = %s" % (link_tags))
         for link_tag in link_tags:
             link = link_tag.get('href')
             if not self.is_ascii(link) or link == "None" or link == None: #or (link.find("#") != -1): # TODO: check if this can occur
 		self.debug.logger("Not ASCII link found", 0)
                 continue
             full_link = self.fixed_urljoin(page_addr, link)
-	    print("full link: %s "% (full_link))
             if not self.is_this_page_good_for_jews(full_link, link):
 		self.debug.logger("skipping")
                 continue
@@ -251,15 +264,15 @@ class WebMapper:
         if (len(page_addr.split('/')) > 15):
             return False
         if not (self.page_contains_base_url(page_addr)):
-            self.debug.logger('map_engine: bad link: not contain base URL '+link,1)
+            self.debug.logger('map_engine: bad link: not contain base URL '+link,0)
             return False
         if self.filter_out(page_addr):
             return False
         if not (self.is_scannable_page(page_addr)):
-            self.debug.logger('map_engine: bad link: not scannable',1)
+            self.debug.logger('map_engine: bad link: not scannable',0)
             return False
         if (page_addr in self.visited_pages):
-            self.debug.logger('map_engine: bad link: visited '+link,1)
+            self.debug.logger('map_engine: bad link: visited '+link,0)
             return False
         self.debug.logger('page good!')
         return True
