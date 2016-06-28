@@ -49,8 +49,6 @@ class Misc:
     Note: this is not implemented yet, since signals supported only for main thread. TODO.
     '''
     def run_with_timer(self, func, args, timeout_msg = "", throw_exp = True, time_in_sec = DEFAULT_TIMEOUT):
-        res = func(*args)
-        return res
         res = None
         try:
             ''' non-main thread cant set signal handler '''

@@ -27,7 +27,7 @@ OUTPUT_DIR       = os.path.join('data', 'mapper')
 EXE_INTV_MIN     = 1
 EXE_INTV_MAX     = 3600
 EXE_INTV_DEFAULT = 0
-LIMIT_DEPTH      = 5
+LIMIT_DEPTH      = 300
 
 class PageNotFound(Exception): pass
 
@@ -97,13 +97,13 @@ class WebMapper:
     def close_single_run(self):
         runtime = round(time.time() - self.curr_run_start_time, 3)
         padding = 16
-        self.debug.logger('\n\n-----+++++++++++--------')
-        self.debug.logger('close_single_run:'.ljust(padding))
-        self.debug.logger('Total run time: '.ljust(padding)+str(runtime)+'s'+' ('+str(runtime/3600)+')')
-        self.debug.logger('Total pages: '.ljust(padding)+str(len(self.visited_pages)))
-        self.debug.logger('Total sites: '.ljust(padding)+str(len(self.sites_addrs)))
-        self.debug.logger('depth reached: '.ljust(padding)+str(self.depth_reached)+'/'+str(LIMIT_DEPTH))
-        self.debug.logger('-----+++++++++++--------\n')
+        self.debug.logger('\n\n-----+++++++++++--------',1)
+        self.debug.logger('close_single_run:'.ljust(padding),1)
+        self.debug.logger('Total run time: '.ljust(padding)+str(runtime)+'s'+' ('+str(runtime/3600)+')',1)
+        self.debug.logger('Total pages: '.ljust(padding)+str(len(self.visited_pages)),1)
+        self.debug.logger('Total sites: '.ljust(padding)+str(len(self.sites_addrs)),1)
+        self.debug.logger('depth reached: '.ljust(padding)+str(self.depth_reached)+'/'+str(LIMIT_DEPTH),1)
+        self.debug.logger('-----+++++++++++--------\n',1)
         if not self.is_data_saved:
             self.save_data(self.last_run_datetime)
             self.is_data_saved = True
@@ -155,13 +155,17 @@ class WebMapper:
             return False
         return True
 
+    def contains(self, _str, substr):
+        return -1 != _str.find(substr) 
+
+
     def page_contains_base_url(self, page_addr):
         if -1 == page_addr.find(self.base_url):
             return False
         return True
 
     def is_scannable_page(self, page_addr):
-        if page_addr[-5:] != '.html' and page_addr[-4:] != '.htm' and page_addr[-1] != '/' and page_addr[-5:] != 'ac.il':
+        if not self.contains(page_addr, '.htm') and not self.contains(page_addr, '.shtm') and page_addr[-1] != '/' and page_addr[-5:] != 'ac.il':
             return False
         #bad_parts = ['.pdf', '.PDF', '.doc', '.jpg', '.JPG', '.pptx', '.gif', 'mp4', 'ps', 'jigsaw']
         bad_parts = ['jigsaw', 'facebook', 'mailto:']
@@ -170,6 +174,7 @@ class WebMapper:
                 return False
         if not (self.is_ascii(page_addr)):
             return False
+	#print("scannable")
         return True
 
     def filter_out(self, page_addr):
@@ -199,6 +204,7 @@ class WebMapper:
         ''' Some optimizations: '''
         self.scanned_pages.add(page_addr)
         html_doc, optional_err_msg = self.get_html_doc(page_addr)
+        #self.debug.logger("bp1")
         ''' we want to continue scraping in case that a connection to web page timed-out or page not found '''
         if None == html_doc or not self.validate_html_doc(html_doc) or optional_err_msg != None:
             err_msg = optional_err_msg if  optional_err_msg != None else 'page not found'
@@ -217,14 +223,18 @@ class WebMapper:
         self.visited_pages.add(page_addr)
         if self.is_page_a_site_home(page_addr):
             self.sites_addrs.add(page_addr)
-        self.debug.logger("page_addr="+page_addr)
+        self.debug.logger("page_addr="+page_addr, 1)
         link_tags = soup.find_all('a')
+        self.debug.logger("found all links")
         for link_tag in link_tags:
             link = link_tag.get('href')
-            if not self.is_ascii(link) or link == "None" or link == None or (link.find("#") != -1): # TODO: check if this can occur
+            if not self.is_ascii(link) or link == "None" or link == None: #or (link.find("#") != -1): # TODO: check if this can occur
+		self.debug.logger("Not ASCII link found", 0)
                 continue
             full_link = self.fixed_urljoin(page_addr, link)
+	    print("full link: %s "% (full_link))
             if not self.is_this_page_good_for_jews(full_link, link):
+		self.debug.logger("skipping")
                 continue
             self.map_engine(full_link, depth - 1)
             if (self.need_to_quit == 2):
@@ -233,25 +243,25 @@ class WebMapper:
     def is_this_page_good_for_jews(self, page_addr, link):
         #self.debug.logger('validat page...')
         if (None == page_addr):
-            self.debug.logger('map_enginae: bad link:'+link)
+            self.debug.logger('map_enginae: bad link:'+link,2)
             return False
         if not (self.is_ascii(page_addr)):
-            self.debug.logger('map_engine: bad link: not ASCII')
+            self.debug.logger('map_engine: bad link: not ASCII ',2)
             return False
         if (len(page_addr.split('/')) > 15):
             return False
         if not (self.page_contains_base_url(page_addr)):
-            #self.debug.logger('map_engine: bad link: not contain base URL')
+            self.debug.logger('map_engine: bad link: not contain base URL '+link,1)
             return False
         if self.filter_out(page_addr):
             return False
         if not (self.is_scannable_page(page_addr)):
-            #self.debug.logger('map_engine: bad link: not scannable')
+            self.debug.logger('map_engine: bad link: not scannable',1)
             return False
         if (page_addr in self.visited_pages):
-            #self.debug.logger('map_engine: bad link: visited')
+            self.debug.logger('map_engine: bad link: visited '+link,1)
             return False
-        #self.debug.logger('page good!')
+        self.debug.logger('page good!')
         return True
 
 
@@ -264,8 +274,10 @@ class WebMapper:
         err_msg   = None
         #self.debug.assrt(page_addr.find("http://") == 0, "get_html_doc: page_addr="+page_addr)
         try:
-            #request = self.misc.run_with_timer(self.http.request, ('GET', page_addr), "request for "+page_addr+" failed", True, 5)  # TODO
-            request = self.http.request('GET', page_addr)
+            self.debug.logger("bp1")
+            request = self.misc.run_with_timer(self.http.request, ('GET', page_addr), "request for "+page_addr+" failed", True, 5)  # TODO
+            self.debug.logger("bp2")
+            #request = self.http.request('GET', page_addr)
             self.profiler.snapshot('http_request')
         except KeyboardInterrupt:
             raise

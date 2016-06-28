@@ -89,7 +89,7 @@ class WebInspector:
                 print "running grunt on "+url
 
                 ### for debug - replacing grunt with demo report file ###
-	        os.system("grunt accessibility")
+	        os.system("grunt accessibility > /dev/null")
 		#print("OOO GRUNT FAILED! on %s" % (url))
 		#continue
                 #with open(report_file, "w") as f:
