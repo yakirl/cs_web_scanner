@@ -173,16 +173,14 @@ class WebMapper:
         return True
 
     def is_scannable_page(self, page_addr):
-        if not self.contains(page_addr, '.htm') and not self.contains(page_addr, '.shtm') and page_addr[-1] != '/' and page_addr[-5:] != 'ac.il':
-            return False
-        #bad_parts = ['.pdf', '.PDF', '.doc', '.jpg', '.JPG', '.pptx', '.gif', 'mp4', 'ps', 'jigsaw']
-        bad_parts = ['jigsaw', 'facebook', 'mailto:']
+        #if not self.contains(page_addr, '.htm') and not self.contains(page_addr, '.shtm') and page_addr[-1] != '/' and page_addr[-5:] != 'ac.il':
+        #    return False
+        bad_suffix  = ['.pdf', '.PDF', '.doc', '.DOC', '.jpg', '.JPG', '.pptx', 'ppt', '.gif', 'mp4', '.ps', '.zip', '.rar', '.bmp']
+        bad_domains = ['jigsaw', 'facebook', 'mailto:']
+        bad_parts = bad_suffix + bad_domains
         for part in bad_parts:
-            if page_addr.find(part) != -1:
+            if self.contains(page_addr, part):
                 return False
-        if not (self.is_ascii(page_addr)):
-            return False
-	#print("scannable")
         return True
 
     def filter_out(self, page_addr):
@@ -229,7 +227,7 @@ class WebMapper:
                 if len(html_doc) > MAX_SCANNABLE_HTML_LEN:
                     self.debug.logger('map_engine: bad page '+page_addr+': '+'page too large', 2)
                     continue
-                callBS = partial(BeautifulSoup, html_doc, 'lxml', parseOnlyThese = sps)
+                callBS = partial(BeautifulSoup, html_doc, 'lxml', parse_only= sps)
                 soup = self.misc.run_with_timer(callBS, (),  "BeautifulSoup failed on page "+page_addr, True)
                 #soup = self.misc.run_with_timer(BeautifulSoup, (html_doc, 'lxml', {'parseOnlyThese': SoupStrainer('a')} ), "BeautifulSoup failed on page "+page_addr, True)
                 #soup = BeautifulSoup (html_doc, 'lxml', parseOnlyThese = SoupStrainer('a') )
@@ -267,24 +265,25 @@ class WebMapper:
 
     def is_this_page_good_for_jews(self, page_addr, link):
         #self.debug.logger('validat page...')
-        if (None == page_addr):
-            self.debug.logger('map_enginae: bad link:'+link,2)
-            return False
         if not (self.is_ascii(page_addr)):
             self.debug.logger('map_engine: bad link: not ASCII ',2)
+            return False
+        if (None == page_addr):
+            self.debug.logger('map_enginae: bad link:'+link,2)
             return False
         if (len(page_addr.split('/')) > 15):
             return False
         if not (self.page_contains_base_url(page_addr)):
-            self.debug.logger('map_engine: bad link: not contain base URL '+link,0)
+            self.debug.logger('map_engine: bad link: not contain base URL '+page_addr,0)
             return False
         if self.filter_out(page_addr):
+            self.debug.logger('map_engine: bad link: filtered out: '+page_addr,2)
             return False
         if not (self.is_scannable_page(page_addr)):
-            self.debug.logger('map_engine: bad link: not scannable',0)
+            self.debug.logger('map_engine: bad link: not scannable: '+page_addr,2)
             return False
         if (page_addr in self.scanned_pages):
-            self.debug.logger('map_engine: bad link: already scanned '+link,0)
+            self.debug.logger('map_engine: bad link: already scanned '+page_addr,0)
             return False
         self.debug.logger('page good!')
         return True
@@ -299,9 +298,9 @@ class WebMapper:
         err_msg   = None
         #self.debug.assrt(page_addr.find("http://") == 0, "get_html_doc: page_addr="+page_addr)
         try:
-            self.debug.logger("bp1")
+            self.debug.logger("requesting page: %s ..." % (page_addr))
             request = self.misc.run_with_timer(self.http.request, ('GET', page_addr), "request for "+page_addr+" failed", True, 5)  # TODO
-            self.debug.logger("bp2")
+            #self.debug.logger("bp2")
             #request = self.http.request('GET', page_addr)
             self.profiler.snapshot('http_request')
         except KeyboardInterrupt:

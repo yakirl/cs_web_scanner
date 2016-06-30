@@ -27,6 +27,7 @@ HTML_FILE =         os.path.join(htmls_dir, "check.html")
 OUTPUT_DIR =        os.path.join(BASE_DIR, "grunt_reports")
 grunt_report_dir =  os.path.join(grunt_dir, "reports", "csv")
 report_file =       os.path.join(grunt_report_dir, "report.csv")
+GRUNT_LOG_FILE  =   os.path.join(BASE_DIR, 'logs', 'grunt.log')
 #TMP_FILE_PATH =     os.path.join(BASE_DIR, 'tmp_url_file.txt')
 
 class WebInspector:
@@ -89,7 +90,7 @@ class WebInspector:
                 self.debug.logger("running grunt on: "+url,1)
 
                 ### for debug - replacing grunt with demo report file ###
-	        os.system("grunt accessibility > /dev/null")
+	        os.system("grunt accessibility >& %s" % (GRUNT_LOG_FILE))
 		#print("OOO GRUNT FAILED! on %s" % (url))
 		#continue
                 #with open(report_file, "w") as f:
