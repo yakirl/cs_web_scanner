@@ -28,7 +28,10 @@ OUTPUT_DIR       = os.path.join('data', 'mapper')
 EXE_INTV_MIN     = 1
 EXE_INTV_MAX     = 3600
 EXE_INTV_DEFAULT = 0
-LIMIT_DEPTH      = 300
+AVG_LINKS_IN_PAGE = 50
+REQUIRED_LIMIT_DEPTH = 10000
+LIMIT_DEPTH      = AVG_LINKS_IN_PAGE * REQUIRED_LIMIT_DEPTH
+MAX_SCANNABLE_HTML_LEN = 200000
 
 class PageNotFound(Exception): pass
 
@@ -198,60 +201,67 @@ class WebMapper:
     Main function: recursively scan sites
     '''
     def map_engine(self, page_addr, depth):
-        #self.debug.logger('map_engine')
-        self.check_quit_requests()
-        if self.need_to_quit == 2:
-            return
-        self.depth_reached = max(self.depth_reached, LIMIT_DEPTH - depth)
-        if depth == 0:
-            return
-        self.debug.assrt(depth > 0, 'map_engine: depth='+str(depth))
-        ''' Some optimizations: '''
-        self.scanned_pages.add(page_addr)
-        html_doc, optional_err_msg = self.get_html_doc(page_addr)
-        #self.debug.logger("bp1")
-        ''' we want to continue scraping in case that a connection to web page timed-out or page not found '''
-        if None == html_doc or not self.validate_html_doc(html_doc) or optional_err_msg != None:
-            err_msg = optional_err_msg if  optional_err_msg != None else 'page not found'
-            self.debug.logger('map_engine: '+page_addr+': '+err_msg, 2)
-            return
-        self.profiler.snapshot('initial_checks')
-        try:
-            self.debug.logger("Running BS on %s" % (page_addr))
-            #soup = self.misc.run_with_timer(BeautifulSoup, (html_doc, 'html.parser'), "BeautifulSoup failed on page "+page_addr, True)
-            sps = SoupStrainer('a')
-            callBS = partial(BeautifulSoup, html_doc, 'lxml', parseOnlyThese = sps)
-            soup = self.misc.run_with_timer(callBS, (),  "BeautifulSoup failed on page "+page_addr, True)
-            #soup = self.misc.run_with_timer(BeautifulSoup, (html_doc, 'lxml', {'parseOnlyThese': SoupStrainer('a')} ), "BeautifulSoup failed on page "+page_addr, True)
-            #soup = BeautifulSoup (html_doc, 'lxml', parseOnlyThese = SoupStrainer('a') )
-        except (KeyboardInterrupt, SystemExit) as e:
-            raise
-        except:
-            err_msg = str(sys.exc_info()[0])
-            self.debug.logger('map_engine: bad page '+page_addr+': '+err_msg, 2)
-            return
-        #self.debug.logger("soup = %s" % (soup))
-        self.profiler.snapshot('beautifulsoups')
-        self.visited_pages.add(page_addr)
-        if self.is_page_a_site_home(page_addr):
-            self.sites_addrs.add(page_addr)
-        self.debug.logger("page_addr="+page_addr, 1)
-        link_tags = soup.find_all('a')
-        #link_tags = page_addr.findAll('a')
-
-        #self.debug.logger("link_tags = %s" % (link_tags))
-        for link_tag in link_tags:
-            link = link_tag.get('href')
-            if not self.is_ascii(link) or link == "None" or link == None: #or (link.find("#") != -1): # TODO: check if this can occur
-		self.debug.logger("Not ASCII link found", 0)
-                continue
-            full_link = self.fixed_urljoin(page_addr, link)
-            if not self.is_this_page_good_for_jews(full_link, link):
-		self.debug.logger("skipping")
-                continue
-            self.map_engine(full_link, depth - 1)
-            if (self.need_to_quit == 2):
+        self.debug.logger('map_engine')
+        OPEN  = [page_addr]
+        CLOSE = []
+        while [] != OPEN:
+            if 2 == self.check_quit_requests():
                 return
+            page_addr = OPEN.pop()
+            CLOSE.insert(0, page_addr)
+            ''' Some optimizations: '''
+            self.scanned_pages.add(page_addr)
+            html_doc, optional_err_msg = self.get_html_doc(page_addr)
+            ''' we want to continue scraping in case that a connection to web page timed-out or page not found '''
+            if None == html_doc or not self.validate_html_doc(html_doc) or optional_err_msg != None:
+                err_msg = optional_err_msg if  optional_err_msg != None else 'page not found'
+                self.debug.logger('map_engine: '+page_addr+': '+err_msg, 2)
+                continue
+            self.profiler.snapshot('initial_checks')
+            try:
+                self.debug.logger("Running BS on %s" % (page_addr))
+                #soup = self.misc.run_with_timer(BeautifulSoup, (html_doc, 'html.parser'), "BeautifulSoup failed on page "+page_addr, True)
+                sps = SoupStrainer('a')
+                self.debug.logger("html_doc length=%s" % (len(html_doc)))
+                ''' optimization '''
+                if len(html_doc) > MAX_SCANNABLE_HTML_LEN:
+                    self.debug.logger('map_engine: bad page '+page_addr+': '+'page too large', 2)
+                    continue
+                callBS = partial(BeautifulSoup, html_doc, 'lxml', parseOnlyThese = sps)
+                soup = self.misc.run_with_timer(callBS, (),  "BeautifulSoup failed on page "+page_addr, True)
+                #soup = self.misc.run_with_timer(BeautifulSoup, (html_doc, 'lxml', {'parseOnlyThese': SoupStrainer('a')} ), "BeautifulSoup failed on page "+page_addr, True)
+                #soup = BeautifulSoup (html_doc, 'lxml', parseOnlyThese = SoupStrainer('a') )
+            except (KeyboardInterrupt, SystemExit) as e:
+                raise
+            except:
+                err_msg = str(sys.exc_info()[0])
+                self.debug.logger('map_engine: bad page '+page_addr+': '+err_msg, 2)
+                continue
+            #self.debug.logger("soup = %s" % (soup))
+            self.profiler.snapshot('beautifulsoups')
+            self.visited_pages.add(page_addr)
+            if self.is_page_a_site_home(page_addr):
+                self.sites_addrs.add(page_addr)
+            if depth == 0:
+                break
+            depth -= 1
+            self.depth_reached = LIMIT_DEPTH - depth
+            self.debug.logger("page_addr="+page_addr, 1)
+            link_tags = soup.find_all('a')
+            #link_tags = page_addr.findAll('a')
+            #self.debug.logger("link_tags = %s" % (link_tags))
+            for link_tag in link_tags:
+                link = link_tag.get('href')
+                if not self.is_ascii(link) or link == "None" or link == None: #or (link.find("#") != -1): # TODO: check if this can occur
+                    self.debug.logger("Not ASCII link found", 0)
+                    continue
+                full_link = self.fixed_urljoin(page_addr, link)
+                if (full_link in CLOSE) or (full_link in OPEN):
+                    continue
+                if not self.is_this_page_good_for_jews(full_link, link):
+                    self.debug.logger("skipping")
+                    continue
+                OPEN.insert(0, full_link)
 
     def is_this_page_good_for_jews(self, page_addr, link):
         #self.debug.logger('validat page...')
@@ -271,8 +281,8 @@ class WebMapper:
         if not (self.is_scannable_page(page_addr)):
             self.debug.logger('map_engine: bad link: not scannable',0)
             return False
-        if (page_addr in self.visited_pages):
-            self.debug.logger('map_engine: bad link: visited '+link,0)
+        if (page_addr in self.scanned_pages):
+            self.debug.logger('map_engine: bad link: already scanned '+link,0)
             return False
         self.debug.logger('page good!')
         return True
@@ -327,6 +337,7 @@ class WebMapper:
         self.debug.assrt(workObj.workID == WorkID.EXIT, "check_quit_requests: got unrecognized work requests. intergratation is needed!")
         self.debug.logger('check_quit_requests: got exit with type='+str(workObj.param))
         self.need_to_quit = 2
+        return self.need_to_quit
 
     def run_in_cont_mode(self):
         self.debug.logger('WebMapper.run_in_cont_mode:')

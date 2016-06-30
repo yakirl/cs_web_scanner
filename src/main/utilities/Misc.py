@@ -12,7 +12,7 @@ This class has not been checked yet!
 
 class TimeoutException(Exception): pass
 
-DEFAULT_TIMEOUT = 8
+DEFAULT_TIMEOUT = 4
 
 def signal_handler(signum, frame):
     raise TimeoutException
