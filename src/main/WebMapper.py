@@ -31,7 +31,7 @@ EXE_INTV_DEFAULT = 0
 AVG_LINKS_IN_PAGE = 50
 REQUIRED_LIMIT_DEPTH = 10000
 LIMIT_DEPTH      = AVG_LINKS_IN_PAGE * REQUIRED_LIMIT_DEPTH
-MAX_SCANNABLE_HTML_LEN = 200000
+MAX_SCANNABLE_HTML_LEN = 140000
 
 class PageNotFound(Exception): pass
 
@@ -97,8 +97,8 @@ class WebMapper:
         with open(self.output_file, 'w') as f:
             for page_addr in self.visited_pages:
                 f.write(page_addr+"\n")
-        self.debug.logger('Sites in '+os.path.join(self.output_dir, "mapper_sites.txt"))
-        self.debug.logger('Pages in '+self.output_file)
+        self.debug.logger('Sites in '+os.path.join(self.output_dir, "mapper_sites.txt"), 1)
+        self.debug.logger('Pages in '+self.output_file, 1)
 
     def close_single_run(self):
         runtime = round(time.time() - self.curr_run_start_time, 3)
@@ -189,6 +189,8 @@ class WebMapper:
         if page_addr.find('2016') != -1:
             return False
         if page_addr.find('photos') != -1:
+            return True
+        if page_addr.find('events') != -1:
             return True
         if page_addr.find('photo-gallery') != -1:
             return True

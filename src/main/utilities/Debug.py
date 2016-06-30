@@ -67,7 +67,7 @@ class Debug:
             except:
                 print("Couldnt write to file!")
         if log_level >= 2:
-	    print("PRINT_ERR")
+	    #print("PRINT_ERR")
 	    self.ferr.write(msg)
 
     def close_debugger(self):
