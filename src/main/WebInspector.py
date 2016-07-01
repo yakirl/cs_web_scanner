@@ -35,6 +35,7 @@ class WebInspector:
         #set default:
         self.urls_file  = urls_file
         self.output_dir = OUTPUT_DIR
+        self.debug    = register_debugger()
 
     def config(self, urls_file_in, output_dir_in):
         self.urls_file  = urls_file_in

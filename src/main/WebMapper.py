@@ -105,7 +105,7 @@ class WebMapper:
         padding = 16
         self.debug.logger('\n\n-----+++++++++++--------',1)
         self.debug.logger('close_single_run:'.ljust(padding),1)
-        self.debug.logger('Total run time: '.ljust(padding)+str(runtime)+'s'+' ('+str(runtime/3600)+')',1)
+        self.debug.logger('Total run time: '.ljust(padding)+str(runtime)+'s'+' ('+str(round(runtime/3600, 2))+'h)',1)
         self.debug.logger('Total pages: '.ljust(padding)+str(len(self.visited_pages)),1)
         self.debug.logger('Total sites: '.ljust(padding)+str(len(self.sites_addrs)),1)
         self.debug.logger('depth reached: '.ljust(padding)+str(self.depth_reached)+'/'+str(LIMIT_DEPTH),1)
@@ -186,11 +186,11 @@ class WebMapper:
     def filter_out(self, page_addr):
         if page_addr.find('2016') != -1:
             return False
-        if page_addr.find('photos') != -1:
+        if (page_addr.find('photos') != -1)        and (page_addr.find('2') != -1):
             return True
-        if page_addr.find('events') != -1:
+        if (page_addr.find('events') != -1)        and (page_addr.find('2') != -1):
             return True
-        if page_addr.find('photo-gallery') != -1:
+        if (page_addr.find('photo-gallery') != -1) and (page_addr.find('2') != -1):
             return True
         if page_addr.find('/news/') != -1:
             return True
