@@ -494,5 +494,8 @@ if "__main__" == __name__:
         #program_lock_unlock(0)
         close_debugger()
         raise
+    #finally:
+    #	cmd = "sleep 1 ; " % os.path.join(BASE_DIR, "clean_process.sh")
+    #	os.system(os.path.join(BASE_DIR, "clean_process.sh"))
     #program_lock_unlock(0)
 
