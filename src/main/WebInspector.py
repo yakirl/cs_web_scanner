@@ -1,8 +1,13 @@
 __author__ = 'Samuel'
 import os
+os.environ['http_proxy']=''
 import shutil
+import ctypes
 import urllib
 from urlparse import urlparse
+from utilities.Misc  import Misc
+from utilities.Misc  import TimeoutException
+
 from Global import *
 
 ''' ***** WebInspector *****
@@ -30,12 +35,16 @@ report_file =       os.path.join(grunt_report_dir, "report.csv")
 GRUNT_LOG_FILE  =   "/dev/null" # os.path.join(BASE_DIR, 'logs', 'grunt.log')
 #TMP_FILE_PATH =     os.path.join(BASE_DIR, 'tmp_url_file.txt')
 
+MAX_URL_LEN = 110
+GRUNT_TIMEOUT = 9
+
 class WebInspector:
     def __init__(self):
         #set default:
         self.urls_file  = urls_file
         self.output_dir = OUTPUT_DIR
         self.debug    = register_debugger()
+        self.misc     = Misc()
 
     def config(self, urls_file_in, output_dir_in):
         self.urls_file  = urls_file_in
@@ -67,6 +76,13 @@ class WebInspector:
             fullpath = os.path.join(self.output_dir, filename)
             shutil.rmtree(fullpath)
 
+    def file_len(self, fname):
+        with open(fname) as f:
+    	    for i, l in enumerate(f):
+	        pass
+	return i + 1
+
+
     def url_scan(self):
         self.need_to_quit = 0
         #self.clean_dir()
@@ -78,22 +94,40 @@ class WebInspector:
         #if os.path.isfile(HTML_FILE):
         #    os.remove(HTML_FILE)
         os.chdir(grunt_dir)
+	url_count = 0
+
+	num_urls = self.file_len(urls_file_local)
         with open(urls_file_local,"r") as f:
             for url in f:
+		url_count += 1
+		if len(url) > MAX_URL_LEN:
+			continue
                 if os.path.isfile(report_file):
                     os.remove(report_file)
                 if os.path.isfile(HTML_FILE):
                     os.remove(HTML_FILE)
-                f = urllib.urlopen(url)
+		self.debug.logger("getting html in url: %s" % (url),1)
+		try:
+	                f = urllib.urlopen(url)
+		except:
+			self.debug.logger("couldnt retrieve html from: %s" % (url),0)
+			continue
                 html_data = f.read()
                 hf = open(HTML_FILE,"w")
                 hf.write(html_data)
-                self.debug.logger("running grunt on: "+url,1)
+                self.debug.logger("(%d/%d) running grunt on: %s" % (url_count, num_urls, url),1)
 
                 ### for debug - replacing grunt with demo report file ###
 	        cmd = "sudo grunt accessibility > %s" % (GRUNT_LOG_FILE)
 		self.debug.logger(cmd, 0)
-	        os.system(cmd)
+
+		try:
+                	self.misc.run_with_timer(os.system, (cmd,), "grunt accessibility timed out on url: "+url, True, GRUNT_TIMEOUT)
+        	except TimeoutException:
+			continue
+            	except (KeyboardInterrupt, SystemExit) as e:
+			raise
+
 		#print("OOO GRUNT FAILED! on %s" % (url))
 		#continue
                 #with open(report_file, "w") as f:
@@ -103,7 +137,10 @@ class WebInspector:
                 ### End Debug ###
 
                 hf.close()
-                os.remove(HTML_FILE)
+		try:
+	                os.remove(HTML_FILE)
+		except:
+			demo = 0
                 #handeling the grunt report
 		try:
 	            	rf = open(report_file,"r")

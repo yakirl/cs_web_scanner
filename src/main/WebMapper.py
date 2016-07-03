@@ -43,7 +43,6 @@ class WebMapper:
         self.debug.logger('WebMapper initizliation')
         # self.http = self.misc.run_with_timer(urllib3.PoolManager, {'cert_reqs': 'CERT_REQUIRED', 'ca_certs': certifi.where()}, "PoolManger stuck") # TODO
         self.http = urllib3.PoolManager(cert_reqs = 'CERT_REQUIRED', ca_certs = certifi.where())
-        request = self.http.request('GET', 'http://www.example.com')
         #self.http = urllib3.PoolManager(cert_reqs = 'CERT_REQUIRED', ca_certs = certifi.where())
         #self.http = self.misc.run_with_timer(urllib3.PoolManager, (), "PoolManger stuck")
         self.valid = 0
@@ -194,6 +193,8 @@ class WebMapper:
             return True
         if page_addr.find('/news/') != -1:
             return True
+	if page_addr.count('http') > 1:
+            return True
         return False
 
 
@@ -266,10 +267,10 @@ class WebMapper:
     def is_this_page_good_for_jews(self, page_addr, link):
         #self.debug.logger('validat page...')
         if not (self.is_ascii(page_addr)):
-            self.debug.logger('map_engine: bad link: not ASCII ',2)
+            self.debug.logger('map_engine: bad link: not ASCII ',0)
             return False
         if (None == page_addr):
-            self.debug.logger('map_enginae: bad link:'+link,2)
+            self.debug.logger('map_enginae: bad link:'+link,0)
             return False
         if (len(page_addr.split('/')) > 15):
             return False
@@ -277,10 +278,10 @@ class WebMapper:
             self.debug.logger('map_engine: bad link: not contain base URL '+page_addr,0)
             return False
         if self.filter_out(page_addr):
-            self.debug.logger('map_engine: bad link: filtered out: '+page_addr,2)
+            self.debug.logger('map_engine: bad link: filtered out: '+page_addr,0)
             return False
         if not (self.is_scannable_page(page_addr)):
-            self.debug.logger('map_engine: bad link: not scannable: '+page_addr,2)
+            self.debug.logger('map_engine: bad link: not scannable: '+page_addr,0)
             return False
         if (page_addr in self.scanned_pages):
             self.debug.logger('map_engine: bad link: already scanned '+page_addr,0)
